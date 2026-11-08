@@ -175,7 +175,7 @@ function key(code,down){focusGame();const type=down?"keydown":"keyup",k=({Space:
 function mouse(button,down){const type=down?"mousedown":"mouseup",x=innerWidth/2,y=innerHeight/2;const make=()=>new MouseEvent(type,{button,bubbles:true,cancelable:true,clientX:x,clientY:y});window.dispatchEvent(make());document.dispatchEvent(make());$("unity-canvas").dispatchEvent(make());}
 function bindPad(id,down,up){const el=$(id);el.addEventListener("pointerdown",e=>{e.preventDefault();focusGame();el.setPointerCapture(e.pointerId);el.classList.add("active");down();});const release=e=>{el.classList.remove("active");up();};el.addEventListener("pointerup",release);el.addEventListener("pointercancel",release);el.addEventListener("lostpointercapture",release);}
 bindPad("btnA",()=>{key("Space",true);key("Enter",true);},()=>{key("Space",false);key("Enter",false);});
-bindPad("btnX",()=>mouse(0,true),()=>mouse(0,false));
+
 bindPad("btnRB",()=>mouse(2,true),()=>mouse(2,false));
 bindPad("btnLB",()=>key("KeyE",true),()=>key("KeyE",false));
 bindPad("btnLT",()=>key("ControlLeft",true),()=>key("ControlLeft",false));
