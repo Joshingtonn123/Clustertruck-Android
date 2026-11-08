@@ -40,15 +40,8 @@ h1{margin:0 0 6px;font-size:30px;letter-spacing:-1px}
 #btnA,#btnRT,#btnLT,#btnRB,#btnLB,#dpadUp,#dpadDown,#dpadLeft,#dpadRight{right:auto;bottom:auto}
 .dpad{display:none;font-size:22px}
 #btnBack{top:auto!important;left:42%!important;right:auto!important;bottom:10px!important}#btnStart{top:auto!important;left:52%!important;right:auto!important;bottom:10px!important}
-#controls.xbox-layout #btnLT{display:block;left:7%;top:8%}#controls.xbox-layout #btnLB{display:block;left:7%;top:19%}
-#controls.xbox-layout #btnRT{left:93%;top:8%}#controls.xbox-layout #btnRB{left:93%;top:19%}
-#controls.xbox-layout #btnA{left:91%;top:55%}#controls.xbox-layout #btnX{left:84%;top:47%}
-#controls.xbox-layout #btnLB,#controls.xbox-layout #btnLT,#controls.xbox-layout #btnRB,#controls.xbox-layout #btnRT{display:flex}
-#controls.xbox-layout #leftStick{left:31%;top:76%}#controls.xbox-layout #rightStick{left:68%;top:76%}
-#controls.xbox-layout .dpad{display:flex;width:48px;height:48px}
-#controls.xbox-layout #dpadUp{left:13%;top:53%}#controls.xbox-layout #dpadDown{left:13%;top:68%}#controls.xbox-layout #dpadLeft{left:8%;top:60.5%}#controls.xbox-layout #dpadRight{left:18%;top:60.5%}
 #leftStick{left:8%;top:76%}#rightStick{left:68%;top:76%}
-#btnRB{left:84%;top:65%}#btnRT{left:93%;top:65%}#btnX{left:84%;top:82%}#btnLB{left:93%;top:82%}#btnA{left:93%;top:94%}
+#btnRB{left:92%;top:21%}#btnRT{left:92%;top:10%}#btnLT{left:8%;top:10%}#btnLB{left:8%;top:21%}#btnA{left:92%;top:58%}
 #exit,#btnBack,#btnStart{position:absolute;top:10px;z-index:25;pointer-events:auto;background:#111b;padding:7px 11px;font-size:12px}#exit{right:10px}#btnStart{right:74px}#btnBack{right:138px}
 @media(max-width:520px){.stick{width:112px;height:112px}.pad{width:54px;height:54px;font-size:13px}}
 </style>
@@ -117,7 +110,7 @@ let resolution=localStorage.getItem("ct-resolution")||"1600x720";
 let renderScale=Number(localStorage.getItem("ct-render-scale")||100);
 let stretchScreen=localStorage.getItem("ct-stretch")==="1";
 const controlDefaults={"leftStick":{x:14,y:76,size:140,opacity:75},"rightStick":{x:78,y:76,size:140,opacity:75},"btnLT":{x:8,y:10,size:64,opacity:75},"btnLB":{x:8,y:21,size:64,opacity:75},"btnRT":{x:92,y:10,size:64,opacity:75},"btnRB":{x:92,y:21,size:64,opacity:75},"btnA":{x:92,y:58,size:64,opacity:75},"dpadUp":{x:14,y:51,size:48,opacity:75},"dpadDown":{x:14,y:66,size:48,opacity:75},"dpadLeft":{x:9,y:58.5,size:48,opacity:75},"dpadRight":{x:19,y:58.5,size:48,opacity:75},"btnBack":{x:42,y:91,size:58,opacity:75},"btnStart":{x:52,y:91,size:58,opacity:75}};
-let controlLayout=JSON.parse(localStorage.getItem("ct-controls")||"null")||JSON.parse(JSON.stringify(controlDefaults));
+let controlLayout=JSON.parse(localStorage.getItem("ct-controls-v2")||"null")||JSON.parse(JSON.stringify(controlDefaults));
 let gyroEnabled=false,gyroBase=null,gyroLast=0;
 function applyControlLayout(){
  for(const [id,p] of Object.entries(controlLayout)){
@@ -226,7 +219,7 @@ function openEditor(){
 let selectedControl=null,dragPointer=null;
 $("customizeBtn").addEventListener("click",openEditor);
 $("editorBack").addEventListener("click",()=>{$("editor").style.display="none";});
-$("editorSave").addEventListener("click",()=>{localStorage.setItem("ct-controls",JSON.stringify(controlLayout));applyControlLayout();$("editor").style.display="none";});
+$("editorSave").addEventListener("click",()=>{localStorage.setItem("ct-controls-v2",JSON.stringify(controlLayout));applyControlLayout();$("editor").style.display="none";});
 $("editSize").addEventListener("input",e=>{if(!selectedControl)return;controlLayout[selectedControl].size=Number(e.target.value);const el=document.querySelector('.editControl[data-id="'+selectedControl+'"]');if(el){el.style.width=e.target.value+"px";el.style.height=e.target.value+"px";}});
 $("editOpacity").addEventListener("input",e=>{if(!selectedControl)return;controlLayout[selectedControl].opacity=Number(e.target.value);const el=document.querySelector('.editControl[data-id="'+selectedControl+'"]');if(el)el.style.opacity=String(Number(e.target.value)/100);});
 $("editReset").addEventListener("click",()=>{controlLayout=JSON.parse(JSON.stringify(controlDefaults));openEditor();});
