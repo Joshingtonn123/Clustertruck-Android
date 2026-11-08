@@ -1,0 +1,59 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "launcher/**"
+      - "Build/**"
+      - "app/**"
+      - "*.gradle.kts"
+      - "gradle.properties"
+      - ".github/workflows/build-apk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Verify game assets
+        run: |
+          test -f launcher/index.html
+          test -d Build
+          test -f Build/ClusterTruckWEB.loader.js
+          test -f Build/ClusterTruckWEB.framework.js
+          ls -lh Build/ClusterTruckWEB*
+
+      - name: Package launcher and game files
+        run: |
+          mkdir -p app/src/main/assets/launcher
+          cp launcher/index.html app/src/main/assets/launcher/index.html
+          cp -R Build app/src/main/assets/launcher/Build
+
+      - name: Build debug APK
+        run: gradle --no-daemon assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Clustertruck-Android-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
