@@ -41,6 +41,13 @@ jobs:
           test -f Build/ClusterTruckWEB.framework.js
           ls -lh Build/ClusterTruckWEB*
 
+      - name: Prepare Clustertruck launcher icon
+        run: |
+          mkdir -p app/src/main/res/mipmap-mdpi app/src/main/res/mipmap-hdpi app/src/main/res/mipmap-xhdpi app/src/main/res/mipmap-xxhdpi app/src/main/res/mipmap-xxxhdpi
+          base64 -d app/clustertruck-icon.jpg.b64 > /tmp/clustertruck-icon.jpg
+          file /tmp/clustertruck-icon.jpg
+          for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do cp /tmp/clustertruck-icon.jpg app/src/main/res/mipmap-$density/ic_launcher.jpg; done
+
       - name: Package launcher and game files
         run: |
           mkdir -p app/src/main/assets/launcher
