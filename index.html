@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Clustertruck Android</title>
+<!-- Launcher source packaged for the Android WebView APK. -->
 <style>
 :root{color-scheme:dark;font-family:Arial,Helvetica,sans-serif}
 *{box-sizing:border-box}
@@ -17,7 +18,7 @@ h1{margin:0 0 6px;font-size:30px;letter-spacing:-1px}
 #progressWrap{height:5px;background:#292929;border-radius:8px;margin-top:14px;overflow:hidden;display:none}
 #progress{height:100%;width:0;background:#e8e8e8}
 #status{font-size:12px;color:#999;margin-top:9px;min-height:16px}
-.section{border-top:1px solid #292929;margin-top:24px;padding-top:18px}
+.section{border-top:1px solid #292929;margin-top:24px;padding-top:18px}.setting select{background:#191919;color:#eee;border:1px solid #444;border-radius:8px;padding:8px}.setting input[type=range]{width:48%;accent-color:#e34b4b}.setting button.action{padding:9px 12px;border-radius:8px;font-size:13px}
 .sectionTitle{font-size:12px;color:#888;letter-spacing:1.5px;font-weight:700;margin-bottom:14px}
 .setting{display:flex;align-items:center;justify-content:space-between;padding:8px 0}
 .setting span{font-size:14px}
@@ -32,18 +33,15 @@ h1{margin:0 0 6px;font-size:30px;letter-spacing:-1px}
 #controls{display:none;position:absolute;inset:0;pointer-events:none;z-index:15}
 .stick{position:absolute;width:116px;height:116px;border:2px solid #ffffff66;background:#1117;border-radius:50%;pointer-events:auto;touch-action:none;display:flex;align-items:center;justify-content:center}
 .stick .nub{width:46px;height:46px;border-radius:50%;background:#ffffff55;border:1px solid #ffffff99}
-#leftStick{left:22px;bottom:24px}
-#rightStick{right:150px;bottom:24px}
-#buttons{position:absolute;right:16px;bottom:18px;width:126px;height:150px;pointer-events:none}
-.pad{position:absolute;width:48px;height:48px;padding:0;border-radius:50%;background:#151515bb;border:1px solid #ffffff99;font-weight:800;font-size:14px;pointer-events:auto;touch-action:none;box-shadow:0 2px 8px #0008}
+#leftStick,#rightStick{left:0;top:0;bottom:auto;right:auto;width:140px;height:140px;transform:translate(-50%,-50%)}
+#buttons{position:absolute;inset:0;width:auto;height:auto;pointer-events:none}
+.pad{position:absolute;left:0;top:0;width:64px;height:64px;padding:0;border-radius:50%;background:#151515bb;border:1px solid #ffffff99;font-weight:800;font-size:16px;pointer-events:auto;touch-action:none;box-shadow:0 2px 8px #0008;transform:translate(-50%,-50%)}
 .pad.active{background:#b52b2b;color:white}
-#btnA{right:0;bottom:0}
-#btnX{left:0;bottom:48px}
-#btnRT{right:0;top:0}
-#btnRB{left:0;top:0}
-#btnLB{left:39px;top:48px}
+#btnA,#btnX,#btnRT,#btnRB,#btnLB{right:auto;bottom:auto}
+#leftStick{left:8%;top:76%}#rightStick{left:68%;top:76%}
+#btnRB{left:84%;top:65%}#btnRT{left:93%;top:65%}#btnX{left:84%;top:82%}#btnLB{left:93%;top:82%}#btnA{left:93%;top:94%}
 #exit{position:absolute;right:10px;top:10px;z-index:25;pointer-events:auto;background:#111b;padding:7px 11px;font-size:12px}
-@media(max-width:520px){.stick{width:100px;height:100px}#rightStick{right:142px}#buttons{transform:scale(.9);transform-origin:bottom right}}
+@media(max-width:520px){.stick{width:112px;height:112px}.pad{width:54px;height:54px;font-size:13px}}
 </style>
 </head>
 <body>
@@ -57,6 +55,9 @@ h1{margin:0 0 6px;font-size:30px;letter-spacing:-1px}
   <div class="section">
    <div class="sectionTitle">SETTINGS</div>
    <div class="setting"><span>Show FPS counter</span><button class="switch" id="fpsToggle" role="switch" aria-checked="false" aria-label="Show FPS counter"></button></div>
+   <div class="setting"><span>Game resolution</span><select id="gameResolution"><option>600x400</option><option>800x600</option><option selected>1600x720</option><option>1248x720</option></select></div>
+   <div class="setting"><span>Graphics resolution <b id="scaleValue">100%</b></span><input id="renderScale" type="range" min="10" max="100" step="5" value="100"></div>
+   <div class="setting"><span>Touch controls</span><button class="action" id="customizeBtn">CUSTOMIZE</button></div>
   </div>
  </main>
 </div>
@@ -77,6 +78,17 @@ h1{margin:0 0 6px;font-size:30px;letter-spacing:-1px}
  </div>
  <div id="gameError"></div>
 </div>
+<div id="editor" style="display:none;position:fixed;inset:0;background:#000;z-index:100;overflow:hidden">
+ <div style="position:absolute;left:16px;top:14px;right:16px;display:flex;align-items:center;justify-content:space-between;z-index:3">
+  <button id="editorBack">BACK</button><b>MOVE CONTROLS</b><button id="editorSave">SAVE</button>
+ </div>
+ <div id="editorItems" style="position:absolute;inset:0"></div>
+ <div id="editorTools" style="position:absolute;left:12px;right:12px;bottom:12px;padding:12px;background:#151515ee;border:1px solid #444;border-radius:12px;z-index:4;display:flex;gap:16px;align-items:center;justify-content:center;flex-wrap:wrap">
+  <label>Size <input id="editSize" type="range" min="40" max="220" value="64"></label>
+  <label>Opacity <input id="editOpacity" type="range" min="10" max="100" value="75"></label>
+  <button id="editReset">RESET</button>
+ </div>
+</div>
 <script>
 const BASE="Build/";
 const DB_NAME="clustertruck-android-install";
@@ -89,6 +101,11 @@ const ASSETS=[
 ];
 const $=id=>document.getElementById(id);
 let db=null,unityInstance=null,installed=false,rtOn=false,fpsEnabled=localStorage.getItem("ct-fps")==="1";
+let resolution=localStorage.getItem("ct-resolution")||"1600x720";
+let renderScale=Number(localStorage.getItem("ct-render-scale")||100);
+const controlDefaults={"leftStick":{x:14,y:76,size:140,opacity:75},"rightStick":{x:77,y:76,size:140,opacity:75},"btnRB":{x:87,y:65,size:64,opacity:75},"btnRT":{x:96,y:65,size:64,opacity:75},"btnX":{x:87,y:82,size:64,opacity:75},"btnLB":{x:96,y:82,size:64,opacity:75},"btnA":{x:96,y:94,size:64,opacity:75}};
+let controlLayout=JSON.parse(localStorage.getItem("ct-controls")||"null")||JSON.parse(JSON.stringify(controlDefaults));
+function applyControlLayout(){for(const [id,p] of Object.entries(controlLayout)){const el=$(id);if(!el)continue;el.style.left=p.x+"%";el.style.top=p.y+"%";el.style.right="auto";el.style.bottom="auto";el.style.width=p.size+"px";el.style.height=p.size+"px";el.style.opacity=p.opacity/100;if(id.endsWith("Stick")){el.querySelector(".nub").style.width=Math.max(30,p.size*.34)+"px";el.querySelector(".nub").style.height=Math.max(30,p.size*.34)+"px";}}}
 function openDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB_NAME,DB_VERSION);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains("files"))req.result.createObjectStore("files",{keyPath:"key"});if(!req.result.objectStoreNames.contains("meta"))req.result.createObjectStore("meta",{keyPath:"key"});};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
 function put(store,value){return new Promise((resolve,reject)=>{const tx=db.transaction(store,"readwrite");tx.objectStore(store).put(value);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});}
 function get(store,key){return new Promise((resolve,reject)=>{const req=db.transaction(store).objectStore(store).get(key);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
@@ -125,14 +142,19 @@ async function play(){
   const [data,wasm,loader,framework]=await Promise.all([readAsset("data"),readAsset("wasm"),readAsset("loader"),readAsset("framework")]);
   const dataUrl=URL.createObjectURL(data),wasmUrl=URL.createObjectURL(wasm),loaderUrl=URL.createObjectURL(loader),frameworkUrl=URL.createObjectURL(framework);
   const script=document.createElement("script");script.src=loaderUrl;
+  const [baseW,baseH]=resolution.split("x").map(Number);
+  const canvas=$("unity-canvas");
+  canvas.style.width="100%";canvas.style.height="100%";
+  canvas.width=Math.max(1,Math.round(baseW*renderScale/100));
+  canvas.height=Math.max(1,Math.round(baseH*renderScale/100));
   await new Promise((resolve,reject)=>{script.onload=resolve;script.onerror=()=>reject(new Error("Unity loader could not start"));document.body.appendChild(script);});
-  unityInstance=await createUnityInstance($("unity-canvas"),{dataUrl,codeUrl:wasmUrl,frameworkUrl,streamingAssetsUrl:BASE,companyName:"Landfall",productName:"Clustertruck",productVersion:"1.0"},p=>setStatus("Starting game… "+Math.round(p*100)+"%"));
+  unityInstance=await createUnityInstance($("unity-canvas"),{dataUrl,codeUrl:wasmUrl,frameworkUrl,streamingAssetsUrl:BASE,companyName:"Landfall",productName:"Clustertruck",productVersion:"1.0",matchWebGLToCanvasSize:false,webglContextAttributes:{antialias:false,alpha:false,preserveDrawingBuffer:false,powerPreference:"low-power"}},p=>setStatus("Starting game… "+Math.round(p*100)+"%"));
   setTimeout(()=>{URL.revokeObjectURL(dataUrl);URL.revokeObjectURL(wasmUrl);URL.revokeObjectURL(loaderUrl);URL.revokeObjectURL(frameworkUrl);},5000);
   startFPS();
  }catch(e){console.error(e);$("gameError").style.display="block";$("gameError").textContent="Could not start the game: "+e.message;}
 }
-function key(code,down){const type=down?"keydown":"keyup";$("unity-canvas").dispatchEvent(new KeyboardEvent(type,{key:code==="Space"?" ":code==="ShiftLeft"?"Shift":code.replace("Key","").toLowerCase(),code,bubbles:true}));}
-function mouse(button,down){const type=down?"mousedown":"mouseup";$("unity-canvas").dispatchEvent(new MouseEvent(type,{button,bubbles:true,clientX:innerWidth/2,clientY:innerHeight/2}));}
+function key(code,down){const type=down?"keydown":"keyup",k=code==="Space"?" ":code==="ShiftLeft"?"Shift":code.replace("Key","").toLowerCase();const ev=()=>new KeyboardEvent(type,{key:k,code,bubbles:true,cancelable:true});window.dispatchEvent(ev());document.dispatchEvent(ev());$("unity-canvas").dispatchEvent(ev());}
+function mouse(button,down){const type=down?"mousedown":"mouseup",x=innerWidth/2,y=innerHeight/2;const make=()=>new MouseEvent(type,{button,bubbles:true,cancelable:true,clientX:x,clientY:y});window.dispatchEvent(make());document.dispatchEvent(make());$("unity-canvas").dispatchEvent(make());}
 function bindPad(id,down,up){const el=$(id);el.addEventListener("pointerdown",e=>{e.preventDefault();el.setPointerCapture(e.pointerId);el.classList.add("active");down();});const release=e=>{el.classList.remove("active");up();};el.addEventListener("pointerup",release);el.addEventListener("pointercancel",release);el.addEventListener("lostpointercapture",release);}
 bindPad("btnA",()=>key("Space",true),()=>key("Space",false));
 bindPad("btnX",()=>mouse(0,true),()=>mouse(0,false));
@@ -147,12 +169,30 @@ function bindStick(id,kind){const el=$(id),nub=el.querySelector(".nub");let poin
  });
  el.addEventListener("pointerup",release);el.addEventListener("pointercancel",release);el.addEventListener("lostpointercapture",release);
 }
-bindStick("leftStick","move");bindStick("rightStick","look");
-function startFPS(){let last=performance.now(),frames=0;function tick(now){if(!fpsEnabled)return;frames++;if(now-last>=1000){$("fps").textContent="FPS: "+Math.round(frames*1000/(now-last));frames=0;last=now;}requestAnimationFrame(tick);}requestAnimationFrame(tick);}
-function setFPS(v){fpsEnabled=v;localStorage.setItem("ct-fps",v?"1":"0");$("fpsToggle").classList.toggle("on",v);$("fpsToggle").setAttribute("aria-checked",String(v));}
+bindStick("leftStick","move");bindStick("rightStick","look");applyControlLayout();
+let fpsLoopRunning=false;function startFPS(){if(fpsLoopRunning||!fpsEnabled)return;fpsLoopRunning=true;let last=performance.now(),frames=0;function tick(now){if(!fpsEnabled){fpsLoopRunning=false;return;}frames++;if(now-last>=1000){$("fps").textContent="FPS: "+Math.round(frames*1000/(now-last));frames=0;last=now;}requestAnimationFrame(tick);}requestAnimationFrame(tick);}
+function setFPS(v){fpsEnabled=v;localStorage.setItem("ct-fps",v?"1":"0");$("fpsToggle").classList.toggle("on",v);$("fpsToggle").setAttribute("aria-checked",String(v));if($("game").style.display==="block"){$("fps").style.display=v?"block":"none";if(v)startFPS();}}
 $("fpsToggle").addEventListener("click",()=>setFPS(!fpsEnabled));setFPS(fpsEnabled);
+$("gameResolution").value=resolution;$("renderScale").value=renderScale;$("scaleValue").textContent=renderScale+"%";
+$("gameResolution").addEventListener("change",e=>{resolution=e.target.value;localStorage.setItem("ct-resolution",resolution);});
+$("renderScale").addEventListener("input",e=>{renderScale=Number(e.target.value);$("scaleValue").textContent=renderScale+"%";localStorage.setItem("ct-render-scale",String(renderScale));});
+function openEditor(){
+ const editor=$("editor"),items=$("editorItems");items.innerHTML="";editor.style.display="block";
+ for(const id of Object.keys(controlDefaults)){const p=controlLayout[id],el=document.createElement("div");el.className="editControl";el.dataset.id=id;el.textContent=id.endsWith("Stick")? (id==="leftStick"?"LEFT STICK":"RIGHT STICK"):id.replace("btn","");el.style.cssText="position:absolute;left:"+p.x+"%;top:"+p.y+"%;width:"+p.size+"px;height:"+p.size+"px;transform:translate(-50%,-50%);border:2px solid #fff9;border-radius:"+(id.endsWith("Stick")?"50%":"50%")+";background:#ffffff22;display:flex;align-items:center;justify-content:center;font-weight:bold;touch-action:none;opacity:"+(p.opacity/100)+";";items.appendChild(el);
+  el.addEventListener("pointerdown",e=>{e.preventDefault();selectedControl=id;document.querySelectorAll(".editControl").forEach(n=>n.style.outline="none");el.style.outline="2px solid #e34b4b";$("editSize").value=controlLayout[id].size;$("editOpacity").value=controlLayout[id].opacity;el.setPointerCapture(e.pointerId);dragPointer=e.pointerId;});
+  el.addEventListener("pointermove",e=>{if(dragPointer!==e.pointerId)return;const x=Math.max(3,Math.min(97,e.clientX/innerWidth*100)),y=Math.max(8,Math.min(92,e.clientY/innerHeight*100));controlLayout[id].x=x;controlLayout[id].y=y;el.style.left=x+"%";el.style.top=y+"%";});
+  el.addEventListener("pointerup",()=>dragPointer=null);el.addEventListener("pointercancel",()=>dragPointer=null);
+ }
+}
+let selectedControl=null,dragPointer=null;
+$("customizeBtn").addEventListener("click",openEditor);
+$("editorBack").addEventListener("click",()=>{$("editor").style.display="none";});
+$("editorSave").addEventListener("click",()=>{localStorage.setItem("ct-controls",JSON.stringify(controlLayout));applyControlLayout();$("editor").style.display="none";});
+$("editSize").addEventListener("input",e=>{if(!selectedControl)return;controlLayout[selectedControl].size=Number(e.target.value);const el=document.querySelector('.editControl[data-id="'+selectedControl+'"]');if(el){el.style.width=e.target.value+"px";el.style.height=e.target.value+"px";}});
+$("editOpacity").addEventListener("input",e=>{if(!selectedControl)return;controlLayout[selectedControl].opacity=Number(e.target.value);const el=document.querySelector('.editControl[data-id="'+selectedControl+'"]');if(el)el.style.opacity=String(Number(e.target.value)/100);});
+$("editReset").addEventListener("click",()=>{controlLayout=JSON.parse(JSON.stringify(controlDefaults));openEditor();});
 $("installBtn").addEventListener("click",async()=>{if(installed){play();return;}db=await openDB();const m=await get("meta","installed");if(m&&m.value){installed=true;play();}else install();});
-$("exit").addEventListener("click",()=>{if(unityInstance&&unityInstance.Quit)unityInstance.Quit();unityInstance=null;$("game").style.display="none";$("launcher").style.display="flex";rtOn=false;$("btnRT").classList.remove("active");});
+$("exit").addEventListener("click",()=>{if(unityInstance&&unityInstance.Quit)unityInstance.Quit();unityInstance=null;$("game").style.display="none";$("launcher").style.display="flex";if(rtOn)key("ShiftLeft",false);rtOn=false;$("btnRT").classList.remove("active");});
 (async()=>{try{db=await openDB();const m=await get("meta","installed");if(m&&m.value){installed=true;$("installBtn").textContent="PLAY";setStatus("Already installed. Your game files are saved on this device.");}}catch(e){setStatus("Browser storage unavailable: "+e.message);}})();
 </script>
 </body>
