@@ -146,6 +146,7 @@ async function play(){
   const script=document.createElement("script");script.src=loaderUrl;
   const [baseW,baseH]=resolution.split("x").map(Number);
   const canvas=$("unity-canvas");
+  canvas.addEventListener("pointerdown",focusGame);
   canvas.width=Math.max(1,Math.round(baseW*renderScale/100));
   canvas.height=Math.max(1,Math.round(baseH*renderScale/100));
   applyCanvasDisplay();
@@ -156,7 +157,7 @@ async function play(){
  }catch(e){console.error(e);$("gameError").style.display="block";$("gameError").textContent="Could not start the game: "+e.message;}
 }
 function focusGame(){const c=$("unity-canvas");if(c) c.focus({preventScroll:true});}
-function key(code,down){focusGame();const type=down?"keydown":"keyup",k=code==="Space"?" ":code==="ShiftLeft"?"Shift":code==="Escape"?"Escape":code==="Enter"?"Enter":code.replace("Key","").toLowerCase();const ev=()=>new KeyboardEvent(type,{key:k,code,bubbles:true,cancelable:true});window.dispatchEvent(ev());document.dispatchEvent(ev());$("unity-canvas").dispatchEvent(ev());}
+function key(code,down){focusGame();const type=down?"keydown":"keyup",k=({Space:" ",ShiftLeft:"Shift",Escape:"Escape",Enter:"Enter",ArrowUp:"ArrowUp",ArrowDown:"ArrowDown",ArrowLeft:"ArrowLeft",ArrowRight:"ArrowRight"})[code]||code.replace("Key","").toLowerCase();const ev=()=>new KeyboardEvent(type,{key:k,code,bubbles:true,cancelable:true});window.dispatchEvent(ev());document.dispatchEvent(ev());$("unity-canvas").dispatchEvent(ev());}
 function mouse(button,down){const type=down?"mousedown":"mouseup",x=innerWidth/2,y=innerHeight/2;const make=()=>new MouseEvent(type,{button,bubbles:true,cancelable:true,clientX:x,clientY:y});window.dispatchEvent(make());document.dispatchEvent(make());$("unity-canvas").dispatchEvent(make());}
 function bindPad(id,down,up){const el=$(id);el.addEventListener("pointerdown",e=>{e.preventDefault();focusGame();el.setPointerCapture(e.pointerId);el.classList.add("active");down();});const release=e=>{el.classList.remove("active");up();};el.addEventListener("pointerup",release);el.addEventListener("pointercancel",release);el.addEventListener("lostpointercapture",release);}
 bindPad("btnA",()=>{key("Space",true);key("Enter",true);},()=>{key("Space",false);key("Enter",false);});
