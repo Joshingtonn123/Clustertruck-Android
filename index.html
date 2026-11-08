@@ -8,9 +8,9 @@
 <style>
 :root{color-scheme:dark;font-family:Arial,Helvetica,sans-serif}
 *{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#090909;color:#f4f4f4;touch-action:none}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#090909;color:#f4f4f4;touch-action:pan-y}
 button{font:inherit;color:inherit;border:1px solid #333;background:#191919;border-radius:12px;padding:14px 20px}
-#launcher{height:100%;overflow:auto;display:flex;align-items:center;justify-content:center;padding:22px}
+#launcher{height:100%;overflow-y:auto;overflow-x:hidden;display:flex;align-items:flex-start;justify-content:center;padding:22px 22px 36px;touch-action:pan-y;-webkit-overflow-scrolling:touch}.panel{flex:0 0 auto;margin:auto 0;min-height:min-content}
 .panel{width:min(100%,430px);background:#111;border:1px solid #292929;border-radius:20px;padding:24px;box-shadow:0 18px 60px #0009}
 h1{margin:0 0 6px;font-size:30px;letter-spacing:-1px}
 .sub{color:#999;font-size:13px;margin-bottom:24px}
@@ -26,8 +26,8 @@ h1{margin:0 0 6px;font-size:30px;letter-spacing:-1px}
 .switch:after{content:"";display:block;width:22px;height:22px;border-radius:50%;background:white;transition:.15s}
 .switch.on{background:#e34b4b}
 .switch.on:after{transform:translateX(20px)}
-#game{display:none;position:fixed;inset:0;background:#000}
-#unity-canvas{width:100%;height:100%;display:block;outline:0}
+#game{display:none;position:fixed;inset:0;background:#000;align-items:center;justify-content:center;overflow:hidden}
+#unity-canvas{display:block;outline:0;flex:none;max-width:100vw;max-height:100vh}
 #fps{display:none;position:absolute;left:10px;top:8px;color:#f22;font-family:Arial,sans-serif;font-size:15px;font-weight:700;z-index:20;pointer-events:none;text-shadow:0 1px 2px #000}
 #gameError{display:none;position:absolute;left:5%;right:5%;top:40%;padding:16px;background:#211;border:1px solid #933;color:#faa;z-index:40;font-size:13px}
 #controls{display:none;position:absolute;inset:0;pointer-events:none;z-index:15}
@@ -40,7 +40,7 @@ h1{margin:0 0 6px;font-size:30px;letter-spacing:-1px}
 #btnA,#btnX,#btnRT,#btnRB,#btnLB{right:auto;bottom:auto}
 #leftStick{left:8%;top:76%}#rightStick{left:68%;top:76%}
 #btnRB{left:84%;top:65%}#btnRT{left:93%;top:65%}#btnX{left:84%;top:82%}#btnLB{left:93%;top:82%}#btnA{left:93%;top:94%}
-#exit{position:absolute;right:10px;top:10px;z-index:25;pointer-events:auto;background:#111b;padding:7px 11px;font-size:12px}
+#exit,#btnBack,#btnStart{position:absolute;top:10px;z-index:25;pointer-events:auto;background:#111b;padding:7px 11px;font-size:12px}#exit{right:10px}#btnStart{right:74px}#btnBack{right:138px}
 @media(max-width:520px){.stick{width:112px;height:112px}.pad{width:54px;height:54px;font-size:13px}}
 </style>
 </head>
@@ -57,6 +57,7 @@ h1{margin:0 0 6px;font-size:30px;letter-spacing:-1px}
    <div class="setting"><span>Show FPS counter</span><button class="switch" id="fpsToggle" role="switch" aria-checked="false" aria-label="Show FPS counter"></button></div>
    <div class="setting"><span>Game resolution</span><select id="gameResolution"><option>600x400</option><option>800x600</option><option selected>1600x720</option><option>1248x720</option></select></div>
    <div class="setting"><span>Graphics resolution <b id="scaleValue">100%</b></span><input id="renderScale" type="range" min="10" max="100" step="5" value="100"></div>
+   <div class="setting"><span>Stretch game screen</span><button class="switch" id="stretchToggle" role="switch" aria-checked="false" aria-label="Stretch game screen"></button></div>
    <div class="setting"><span>Touch controls</span><button class="action" id="customizeBtn">CUSTOMIZE</button></div>
   </div>
  </main>
@@ -64,7 +65,7 @@ h1{margin:0 0 6px;font-size:30px;letter-spacing:-1px}
 <div id="game">
  <canvas id="unity-canvas" tabindex="-1"></canvas>
  <div id="fps">FPS: --</div>
- <button id="exit">EXIT</button>
+ <button id="btnBack">BACK</button><button id="btnStart">START</button><button id="exit">EXIT</button>
  <div id="controls">
   <div class="stick" id="leftStick"><div class="nub"></div></div>
   <div class="stick" id="rightStick"><div class="nub"></div></div>
@@ -103,7 +104,8 @@ const $=id=>document.getElementById(id);
 let db=null,unityInstance=null,installed=false,rtOn=false,fpsEnabled=localStorage.getItem("ct-fps")==="1";
 let resolution=localStorage.getItem("ct-resolution")||"1600x720";
 let renderScale=Number(localStorage.getItem("ct-render-scale")||100);
-const controlDefaults={"leftStick":{x:14,y:76,size:140,opacity:75},"rightStick":{x:77,y:76,size:140,opacity:75},"btnRB":{x:87,y:65,size:64,opacity:75},"btnRT":{x:96,y:65,size:64,opacity:75},"btnX":{x:87,y:82,size:64,opacity:75},"btnLB":{x:96,y:82,size:64,opacity:75},"btnA":{x:96,y:94,size:64,opacity:75}};
+let stretchScreen=localStorage.getItem("ct-stretch")==="1";
+const controlDefaults={"leftStick":{x:14,y:76,size:140,opacity:75},"rightStick":{x:77,y:76,size:140,opacity:75},"btnRB":{x:87,y:65,size:64,opacity:75},"btnRT":{x:96,y:65,size:64,opacity:75},"btnX":{x:87,y:82,size:64,opacity:75},"btnLB":{x:96,y:82,size:64,opacity:75},"btnA":{x:96,y:94,size:64,opacity:75},"btnBack":{x:42,y:5,size:58,opacity:75},"btnStart":{x:51,y:5,size:58,opacity:75}};
 let controlLayout=JSON.parse(localStorage.getItem("ct-controls")||"null")||JSON.parse(JSON.stringify(controlDefaults));
 function applyControlLayout(){for(const [id,p] of Object.entries(controlLayout)){const el=$(id);if(!el)continue;el.style.left=p.x+"%";el.style.top=p.y+"%";el.style.right="auto";el.style.bottom="auto";el.style.width=p.size+"px";el.style.height=p.size+"px";el.style.opacity=p.opacity/100;if(id.endsWith("Stick")){el.querySelector(".nub").style.width=Math.max(30,p.size*.34)+"px";el.querySelector(".nub").style.height=Math.max(30,p.size*.34)+"px";}}}
 function openDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB_NAME,DB_VERSION);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains("files"))req.result.createObjectStore("files",{keyPath:"key"});if(!req.result.objectStoreNames.contains("meta"))req.result.createObjectStore("meta",{keyPath:"key"});};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
@@ -136,7 +138,7 @@ async function install(){
 }
 async function readAsset(id){const meta=await get("meta",id);if(!meta)throw new Error("Missing installed file: "+id);const buffers=[];for(let i=0;i<meta.parts;i++){const row=await get("files",id+":"+i);if(!row)throw new Error("Missing part "+(i+1)+" of "+id);buffers.push(row.buffer);}return new Blob(buffers,{type:meta.mime});}
 async function play(){
- $("launcher").style.display="none";$("game").style.display="block";$("controls").style.display="block";$("fps").style.display=fpsEnabled?"block":"none";$("unity-canvas").focus();
+ $("launcher").style.display="none";$("game").style.display="flex";$("controls").style.display="block";$("fps").style.display=fpsEnabled?"block":"none";$("unity-canvas").focus();
  try{
   db=db||await openDB();
   const [data,wasm,loader,framework]=await Promise.all([readAsset("data"),readAsset("wasm"),readAsset("loader"),readAsset("framework")]);
@@ -144,38 +146,45 @@ async function play(){
   const script=document.createElement("script");script.src=loaderUrl;
   const [baseW,baseH]=resolution.split("x").map(Number);
   const canvas=$("unity-canvas");
-  canvas.style.width="100%";canvas.style.height="100%";
+  canvas.addEventListener("pointerdown",focusGame);
   canvas.width=Math.max(1,Math.round(baseW*renderScale/100));
   canvas.height=Math.max(1,Math.round(baseH*renderScale/100));
+  applyCanvasDisplay();
   await new Promise((resolve,reject)=>{script.onload=resolve;script.onerror=()=>reject(new Error("Unity loader could not start"));document.body.appendChild(script);});
   unityInstance=await createUnityInstance($("unity-canvas"),{dataUrl,codeUrl:wasmUrl,frameworkUrl,streamingAssetsUrl:BASE,companyName:"Landfall",productName:"Clustertruck",productVersion:"1.0",matchWebGLToCanvasSize:false,webglContextAttributes:{antialias:false,alpha:false,preserveDrawingBuffer:false,powerPreference:"low-power"}},p=>setStatus("Starting game… "+Math.round(p*100)+"%"));
   setTimeout(()=>{URL.revokeObjectURL(dataUrl);URL.revokeObjectURL(wasmUrl);URL.revokeObjectURL(loaderUrl);URL.revokeObjectURL(frameworkUrl);},5000);
   startFPS();
  }catch(e){console.error(e);$("gameError").style.display="block";$("gameError").textContent="Could not start the game: "+e.message;}
 }
-function key(code,down){const type=down?"keydown":"keyup",k=code==="Space"?" ":code==="ShiftLeft"?"Shift":code.replace("Key","").toLowerCase();const ev=()=>new KeyboardEvent(type,{key:k,code,bubbles:true,cancelable:true});window.dispatchEvent(ev());document.dispatchEvent(ev());$("unity-canvas").dispatchEvent(ev());}
+function focusGame(){const c=$("unity-canvas");if(c) c.focus({preventScroll:true});}
+function key(code,down){focusGame();const type=down?"keydown":"keyup",k=({Space:" ",ShiftLeft:"Shift",Escape:"Escape",Enter:"Enter",ArrowUp:"ArrowUp",ArrowDown:"ArrowDown",ArrowLeft:"ArrowLeft",ArrowRight:"ArrowRight"})[code]||code.replace("Key","").toLowerCase();const ev=()=>new KeyboardEvent(type,{key:k,code,bubbles:true,cancelable:true});window.dispatchEvent(ev());document.dispatchEvent(ev());$("unity-canvas").dispatchEvent(ev());}
 function mouse(button,down){const type=down?"mousedown":"mouseup",x=innerWidth/2,y=innerHeight/2;const make=()=>new MouseEvent(type,{button,bubbles:true,cancelable:true,clientX:x,clientY:y});window.dispatchEvent(make());document.dispatchEvent(make());$("unity-canvas").dispatchEvent(make());}
-function bindPad(id,down,up){const el=$(id);el.addEventListener("pointerdown",e=>{e.preventDefault();el.setPointerCapture(e.pointerId);el.classList.add("active");down();});const release=e=>{el.classList.remove("active");up();};el.addEventListener("pointerup",release);el.addEventListener("pointercancel",release);el.addEventListener("lostpointercapture",release);}
-bindPad("btnA",()=>key("Space",true),()=>key("Space",false));
+function bindPad(id,down,up){const el=$(id);el.addEventListener("pointerdown",e=>{e.preventDefault();focusGame();el.setPointerCapture(e.pointerId);el.classList.add("active");down();});const release=e=>{el.classList.remove("active");up();};el.addEventListener("pointerup",release);el.addEventListener("pointercancel",release);el.addEventListener("lostpointercapture",release);}
+bindPad("btnA",()=>{key("Space",true);key("Enter",true);},()=>{key("Space",false);key("Enter",false);});
 bindPad("btnX",()=>mouse(0,true),()=>mouse(0,false));
 bindPad("btnRB",()=>mouse(2,true),()=>mouse(2,false));
 bindPad("btnLB",()=>key("KeyE",true),()=>key("KeyE",false));
+bindPad("btnBack",()=>key("Escape",true),()=>key("Escape",false));
+bindPad("btnStart",()=>key("Enter",true),()=>key("Enter",false));
 $("btnRT").addEventListener("pointerdown",e=>{e.preventDefault();rtOn=!rtOn;$("btnRT").classList.toggle("active",rtOn);key("ShiftLeft",rtOn);});
 function bindStick(id,kind){const el=$(id),nub=el.querySelector(".nub");let pointer=null,lastX=0,lastY=0,keys=new Set();function release(){keys.forEach(k=>key(k,false));keys.clear();pointer=null;nub.style.transform="translate(0,0)";}
- el.addEventListener("pointerdown",e=>{e.preventDefault();pointer=e.pointerId;el.setPointerCapture(pointer);lastX=e.clientX;lastY=e.clientY;});
+ el.addEventListener("pointerdown",e=>{e.preventDefault();focusGame();pointer=e.pointerId;el.setPointerCapture(pointer);lastX=e.clientX;lastY=e.clientY;});
  el.addEventListener("pointermove",e=>{if(pointer!==e.pointerId)return;const r=el.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=e.clientX-cx,dy=e.clientY-cy;const max=r.width*.32,len=Math.hypot(dx,dy);if(len>max){dx=dx/len*max;dy=dy/len*max;}nub.style.transform="translate("+dx+"px,"+dy+"px)";
- if(kind==="move"){const next=new Set();if(dy< -18)next.add("KeyW");if(dy>18)next.add("KeyS");if(dx< -18)next.add("KeyA");if(dx>18)next.add("KeyD");keys.forEach(k=>{if(!next.has(k))key(k,false);});next.forEach(k=>{if(!keys.has(k))key(k,true);});keys=next;}
+ if(kind==="move"){const next=new Set();if(dy< -18){next.add("KeyW");next.add("ArrowUp");}if(dy>18){next.add("KeyS");next.add("ArrowDown");}if(dx< -18){next.add("KeyA");next.add("ArrowLeft");}if(dx>18){next.add("KeyD");next.add("ArrowRight");}keys.forEach(k=>{if(!next.has(k))key(k,false);});next.forEach(k=>{if(!keys.has(k))key(k,true);});keys=next;}
  else {const mx=e.clientX-lastX,my=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;$("unity-canvas").dispatchEvent(new MouseEvent("mousemove",{movementX:mx,movementY:my,clientX:e.clientX,clientY:e.clientY,bubbles:true}));}
  });
  el.addEventListener("pointerup",release);el.addEventListener("pointercancel",release);el.addEventListener("lostpointercapture",release);
 }
-bindStick("leftStick","move");bindStick("rightStick","look");applyControlLayout();
+bindStick("leftStick","move");bindStick("rightStick","look");applyControlLayout();window.addEventListener("resize",applyCanvasDisplay);
 let fpsLoopRunning=false;function startFPS(){if(fpsLoopRunning||!fpsEnabled)return;fpsLoopRunning=true;let last=performance.now(),frames=0;function tick(now){if(!fpsEnabled){fpsLoopRunning=false;return;}frames++;if(now-last>=1000){$("fps").textContent="FPS: "+Math.round(frames*1000/(now-last));frames=0;last=now;}requestAnimationFrame(tick);}requestAnimationFrame(tick);}
-function setFPS(v){fpsEnabled=v;localStorage.setItem("ct-fps",v?"1":"0");$("fpsToggle").classList.toggle("on",v);$("fpsToggle").setAttribute("aria-checked",String(v));if($("game").style.display==="block"){$("fps").style.display=v?"block":"none";if(v)startFPS();}}
+function applyCanvasDisplay(){const c=$("unity-canvas");if(!c)return;const [w,h]=resolution.split("x").map(Number),aspect=w/h;if(stretchScreen){c.style.width="100vw";c.style.height="100vh";}else{const vw=innerWidth,vh=innerHeight,scale=Math.min(vw/w,vh/h);c.style.width=Math.floor(w*scale)+"px";c.style.height=Math.floor(h*scale)+"px";}c.style.objectFit="fill";}
+function setStretch(v){stretchScreen=v;localStorage.setItem("ct-stretch",v?"1":"0");$("stretchToggle").classList.toggle("on",v);$("stretchToggle").setAttribute("aria-checked",String(v));if($("game").style.display==="flex")applyCanvasDisplay();}
+function setFPS(v){fpsEnabled=v;localStorage.setItem("ct-fps",v?"1":"0");$("fpsToggle").classList.toggle("on",v);$("fpsToggle").setAttribute("aria-checked",String(v));if($("game").style.display==="flex"){$("fps").style.display=v?"block":"none";if(v)startFPS();}}
 $("fpsToggle").addEventListener("click",()=>setFPS(!fpsEnabled));setFPS(fpsEnabled);
 $("gameResolution").value=resolution;$("renderScale").value=renderScale;$("scaleValue").textContent=renderScale+"%";
-$("gameResolution").addEventListener("change",e=>{resolution=e.target.value;localStorage.setItem("ct-resolution",resolution);});
+$("gameResolution").addEventListener("change",e=>{resolution=e.target.value;localStorage.setItem("ct-resolution",resolution);applyCanvasDisplay();});
 $("renderScale").addEventListener("input",e=>{renderScale=Number(e.target.value);$("scaleValue").textContent=renderScale+"%";localStorage.setItem("ct-render-scale",String(renderScale));});
+$("stretchToggle").addEventListener("click",()=>setStretch(!stretchScreen));setStretch(stretchScreen);
 function openEditor(){
  const editor=$("editor"),items=$("editorItems");items.innerHTML="";editor.style.display="block";
  for(const id of Object.keys(controlDefaults)){const p=controlLayout[id],el=document.createElement("div");el.className="editControl";el.dataset.id=id;el.textContent=id.endsWith("Stick")? (id==="leftStick"?"LEFT STICK":"RIGHT STICK"):id.replace("btn","");el.style.cssText="position:absolute;left:"+p.x+"%;top:"+p.y+"%;width:"+p.size+"px;height:"+p.size+"px;transform:translate(-50%,-50%);border:2px solid #fff9;border-radius:"+(id.endsWith("Stick")?"50%":"50%")+";background:#ffffff22;display:flex;align-items:center;justify-content:center;font-weight:bold;touch-action:none;opacity:"+(p.opacity/100)+";";items.appendChild(el);
