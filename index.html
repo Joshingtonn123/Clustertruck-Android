@@ -119,7 +119,7 @@ async function install(){
 }
 async function readAsset(id){const meta=await get("meta",id);if(!meta)throw new Error("Missing installed file: "+id);const buffers=[];for(let i=0;i<meta.parts;i++){const row=await get("files",id+":"+i);if(!row)throw new Error("Missing part "+(i+1)+" of "+id);buffers.push(row.buffer);}return new Blob(buffers,{type:meta.mime});}
 async function play(){
- $("launcher").style.display="none";$("game").style.display="block";$("controls").style.display="block";$("fps").style.display=fpsEnabled?"block":"none";
+ $("launcher").style.display="none";$("game").style.display="block";$("controls").style.display="block";$("fps").style.display=fpsEnabled?"block":"none";$("unity-canvas").focus();
  try{
   db=db||await openDB();
   const [data,wasm,loader,framework]=await Promise.all([readAsset("data"),readAsset("wasm"),readAsset("loader"),readAsset("framework")]);
@@ -131,7 +131,7 @@ async function play(){
   startFPS();
  }catch(e){console.error(e);$("gameError").style.display="block";$("gameError").textContent="Could not start the game: "+e.message;}
 }
-function key(code,down){const type=down?"keydown":"keyup";window.dispatchEvent(new KeyboardEvent(type,{key:code==="Space"?" ":code==="ShiftLeft"?"Shift":code.replace("Key","").toLowerCase(),code,bubbles:true}));}
+function key(code,down){const type=down?"keydown":"keyup";$("unity-canvas").dispatchEvent(new KeyboardEvent(type,{key:code==="Space"?" ":code==="ShiftLeft"?"Shift":code.replace("Key","").toLowerCase(),code,bubbles:true}));}
 function mouse(button,down){const type=down?"mousedown":"mouseup";$("unity-canvas").dispatchEvent(new MouseEvent(type,{button,bubbles:true,clientX:innerWidth/2,clientY:innerHeight/2}));}
 function bindPad(id,down,up){const el=$(id);el.addEventListener("pointerdown",e=>{e.preventDefault();el.setPointerCapture(e.pointerId);el.classList.add("active");down();});const release=e=>{el.classList.remove("active");up();};el.addEventListener("pointerup",release);el.addEventListener("pointercancel",release);el.addEventListener("lostpointercapture",release);}
 bindPad("btnA",()=>key("Space",true),()=>key("Space",false));
