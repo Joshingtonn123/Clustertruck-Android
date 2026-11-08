@@ -103,7 +103,7 @@ const $=id=>document.getElementById(id);
 let db=null,unityInstance=null,installed=false,rtOn=false,fpsEnabled=localStorage.getItem("ct-fps")==="1";
 let resolution=localStorage.getItem("ct-resolution")||"1600x720";
 let renderScale=Number(localStorage.getItem("ct-render-scale")||100);
-const controlDefaults={"leftStick":{x:8,y:76,size:140,opacity:75},"rightStick":{x:68,y:76,size:140,opacity:75},"btnRB":{x:84,y:65,size:64,opacity:75},"btnRT":{x:93,y:65,size:64,opacity:75},"btnX":{x:84,y:82,size:64,opacity:75},"btnLB":{x:93,y:82,size:64,opacity:75},"btnA":{x:93,y:94,size:64,opacity:75}};
+const controlDefaults={"leftStick":{x:14,y:76,size:140,opacity:75},"rightStick":{x:77,y:76,size:140,opacity:75},"btnRB":{x:87,y:65,size:64,opacity:75},"btnRT":{x:96,y:65,size:64,opacity:75},"btnX":{x:87,y:82,size:64,opacity:75},"btnLB":{x:96,y:82,size:64,opacity:75},"btnA":{x:96,y:94,size:64,opacity:75}};
 let controlLayout=JSON.parse(localStorage.getItem("ct-controls")||"null")||JSON.parse(JSON.stringify(controlDefaults));
 function applyControlLayout(){for(const [id,p] of Object.entries(controlLayout)){const el=$(id);if(!el)continue;el.style.left=p.x+"%";el.style.top=p.y+"%";el.style.right="auto";el.style.bottom="auto";el.style.width=p.size+"px";el.style.height=p.size+"px";el.style.opacity=p.opacity/100;if(id.endsWith("Stick")){el.querySelector(".nub").style.width=Math.max(30,p.size*.34)+"px";el.querySelector(".nub").style.height=Math.max(30,p.size*.34)+"px";}}}
 function openDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB_NAME,DB_VERSION);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains("files"))req.result.createObjectStore("files",{keyPath:"key"});if(!req.result.objectStoreNames.contains("meta"))req.result.createObjectStore("meta",{keyPath:"key"});};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
@@ -170,8 +170,8 @@ function bindStick(id,kind){const el=$(id),nub=el.querySelector(".nub");let poin
  el.addEventListener("pointerup",release);el.addEventListener("pointercancel",release);el.addEventListener("lostpointercapture",release);
 }
 bindStick("leftStick","move");bindStick("rightStick","look");applyControlLayout();
-function startFPS(){let last=performance.now(),frames=0;function tick(now){if(!fpsEnabled)return;frames++;if(now-last>=1000){$("fps").textContent="FPS: "+Math.round(frames*1000/(now-last));frames=0;last=now;}requestAnimationFrame(tick);}requestAnimationFrame(tick);}
-function setFPS(v){fpsEnabled=v;localStorage.setItem("ct-fps",v?"1":"0");$("fpsToggle").classList.toggle("on",v);$("fpsToggle").setAttribute("aria-checked",String(v));}
+let fpsLoopRunning=false;function startFPS(){if(fpsLoopRunning||!fpsEnabled)return;fpsLoopRunning=true;let last=performance.now(),frames=0;function tick(now){if(!fpsEnabled){fpsLoopRunning=false;return;}frames++;if(now-last>=1000){$("fps").textContent="FPS: "+Math.round(frames*1000/(now-last));frames=0;last=now;}requestAnimationFrame(tick);}requestAnimationFrame(tick);}
+function setFPS(v){fpsEnabled=v;localStorage.setItem("ct-fps",v?"1":"0");$("fpsToggle").classList.toggle("on",v);$("fpsToggle").setAttribute("aria-checked",String(v));if($("game").style.display==="block"){$("fps").style.display=v?"block":"none";if(v)startFPS();}}
 $("fpsToggle").addEventListener("click",()=>setFPS(!fpsEnabled));setFPS(fpsEnabled);
 $("gameResolution").value=resolution;$("renderScale").value=renderScale;$("scaleValue").textContent=renderScale+"%";
 $("gameResolution").addEventListener("change",e=>{resolution=e.target.value;localStorage.setItem("ct-resolution",resolution);});
@@ -192,7 +192,7 @@ $("editSize").addEventListener("input",e=>{if(!selectedControl)return;controlLay
 $("editOpacity").addEventListener("input",e=>{if(!selectedControl)return;controlLayout[selectedControl].opacity=Number(e.target.value);const el=document.querySelector('.editControl[data-id="'+selectedControl+'"]');if(el)el.style.opacity=String(Number(e.target.value)/100);});
 $("editReset").addEventListener("click",()=>{controlLayout=JSON.parse(JSON.stringify(controlDefaults));openEditor();});
 $("installBtn").addEventListener("click",async()=>{if(installed){play();return;}db=await openDB();const m=await get("meta","installed");if(m&&m.value){installed=true;play();}else install();});
-$("exit").addEventListener("click",()=>{if(unityInstance&&unityInstance.Quit)unityInstance.Quit();unityInstance=null;$("game").style.display="none";$("launcher").style.display="flex";rtOn=false;$("btnRT").classList.remove("active");});
+$("exit").addEventListener("click",()=>{if(unityInstance&&unityInstance.Quit)unityInstance.Quit();unityInstance=null;$("game").style.display="none";$("launcher").style.display="flex";if(rtOn)key("ShiftLeft",false);rtOn=false;$("btnRT").classList.remove("active");});
 (async()=>{try{db=await openDB();const m=await get("meta","installed");if(m&&m.value){installed=true;$("installBtn").textContent="PLAY";setStatus("Already installed. Your game files are saved on this device.");}}catch(e){setStatus("Browser storage unavailable: "+e.message);}})();
 </script>
 </body>
