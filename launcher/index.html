@@ -111,6 +111,8 @@ let renderScale=Number(localStorage.getItem("ct-render-scale")||100);
 let stretchScreen=localStorage.getItem("ct-stretch")==="1";
 const controlDefaults={"leftStick":{x:14,y:76,size:140,opacity:75},"rightStick":{x:78,y:76,size:140,opacity:75},"btnLT":{x:8,y:10,size:64,opacity:75},"btnLB":{x:8,y:28,size:64,opacity:75},"btnRT":{x:92,y:10,size:64,opacity:75},"btnRB":{x:92,y:28,size:64,opacity:75},"btnA":{x:92,y:58,size:64,opacity:75},"dpadUp":{x:14,y:51,size:48,opacity:75},"dpadDown":{x:14,y:66,size:48,opacity:75},"dpadLeft":{x:9,y:58.5,size:48,opacity:75},"dpadRight":{x:19,y:58.5,size:48,opacity:75},"btnBack":{x:42,y:91,size:58,opacity:75},"btnStart":{x:52,y:91,size:58,opacity:75}};
 let controlLayout=JSON.parse(localStorage.getItem("ct-controls-v2")||"null")||JSON.parse(JSON.stringify(controlDefaults));
+if(controlLayout.btnLB&&controlLayout.btnLB.y===21)controlLayout.btnLB.y=28;
+if(controlLayout.btnRB&&controlLayout.btnRB.y===21)controlLayout.btnRB.y=28;
 let gyroEnabled=false,gyroBase=null,gyroLast=0;
 function applyControlLayout(){
  for(const [id,p] of Object.entries(controlLayout)){
