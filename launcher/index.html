@@ -37,7 +37,16 @@ h1{margin:0 0 6px;font-size:30px;letter-spacing:-1px}
 #buttons{position:absolute;inset:0;width:auto;height:auto;pointer-events:none}
 .pad{position:absolute;left:0;top:0;width:64px;height:64px;padding:0;border-radius:50%;background:#151515bb;border:1px solid #ffffff99;font-weight:800;font-size:16px;pointer-events:auto;touch-action:none;box-shadow:0 2px 8px #0008;transform:translate(-50%,-50%)}
 .pad.active{background:#b52b2b;color:white}
-#btnA,#btnX,#btnRT,#btnRB,#btnLB{right:auto;bottom:auto}
+#btnA,#btnX,#btnRT,#btnLT,#btnRB,#btnLB,#dpadUp,#dpadDown,#dpadLeft,#dpadRight{right:auto;bottom:auto}
+.dpad{display:none;font-size:22px}
+#btnBack{top:auto!important;left:42%!important;right:auto!important;bottom:10px!important}#btnStart{top:auto!important;left:52%!important;right:auto!important;bottom:10px!important}
+#controls.xbox-layout #btnLT{display:block;left:7%;top:8%}#controls.xbox-layout #btnLB{display:block;left:7%;top:19%}
+#controls.xbox-layout #btnRT{left:93%;top:8%}#controls.xbox-layout #btnRB{left:93%;top:19%}
+#controls.xbox-layout #btnA{left:91%;top:55%}#controls.xbox-layout #btnX{left:84%;top:47%}
+#controls.xbox-layout #btnLB,#controls.xbox-layout #btnLT,#controls.xbox-layout #btnRB,#controls.xbox-layout #btnRT{display:flex}
+#controls.xbox-layout #leftStick{left:31%;top:76%}#controls.xbox-layout #rightStick{left:68%;top:76%}
+#controls.xbox-layout .dpad{display:flex;width:48px;height:48px}
+#controls.xbox-layout #dpadUp{left:13%;top:53%}#controls.xbox-layout #dpadDown{left:13%;top:68%}#controls.xbox-layout #dpadLeft{left:8%;top:60.5%}#controls.xbox-layout #dpadRight{left:18%;top:60.5%}
 #leftStick{left:8%;top:76%}#rightStick{left:68%;top:76%}
 #btnRB{left:84%;top:65%}#btnRT{left:93%;top:65%}#btnX{left:84%;top:82%}#btnLB{left:93%;top:82%}#btnA{left:93%;top:94%}
 #exit,#btnBack,#btnStart{position:absolute;top:10px;z-index:25;pointer-events:auto;background:#111b;padding:7px 11px;font-size:12px}#exit{right:10px}#btnStart{right:74px}#btnBack{right:138px}
@@ -58,6 +67,7 @@ h1{margin:0 0 6px;font-size:30px;letter-spacing:-1px}
    <div class="setting"><span>Game resolution</span><select id="gameResolution"><option>600x400</option><option>800x600</option><option selected>1600x720</option><option>1248x720</option></select></div>
    <div class="setting"><span>Graphics resolution <b id="scaleValue">100%</b></span><input id="renderScale" type="range" min="10" max="100" step="5" value="100"></div>
    <div class="setting"><span>Stretch game screen</span><button class="switch" id="stretchToggle" role="switch" aria-checked="false" aria-label="Stretch game screen"></button></div>
+   <div class="setting"><span>Xbox-style control layout</span><button class="switch" id="xboxLayoutToggle" role="switch" aria-checked="false" aria-label="Xbox-style control layout"></button></div>
    <div class="setting"><span>Touch controls</span><button class="action" id="customizeBtn">CUSTOMIZE</button></div>
   </div>
  </main>
@@ -70,7 +80,9 @@ h1{margin:0 0 6px;font-size:30px;letter-spacing:-1px}
   <div class="stick" id="leftStick"><div class="nub"></div></div>
   <div class="stick" id="rightStick"><div class="nub"></div></div>
   <div id="buttons">
+   <button class="pad" id="btnLT">LT</button>
    <button class="pad" id="btnRT">RT</button>
+   <button class="pad dpad" id="dpadUp">▲</button><button class="pad dpad" id="dpadDown">▼</button><button class="pad dpad" id="dpadLeft">◀</button><button class="pad dpad" id="dpadRight">▶</button>
    <button class="pad" id="btnX">X</button>
    <button class="pad" id="btnA">A</button>
    <button class="pad" id="btnRB">RB</button>
@@ -105,8 +117,9 @@ let db=null,unityInstance=null,installed=false,rtOn=false,fpsEnabled=localStorag
 let resolution=localStorage.getItem("ct-resolution")||"1600x720";
 let renderScale=Number(localStorage.getItem("ct-render-scale")||100);
 let stretchScreen=localStorage.getItem("ct-stretch")==="1";
-const controlDefaults={"leftStick":{x:14,y:76,size:140,opacity:75},"rightStick":{x:77,y:76,size:140,opacity:75},"btnRB":{x:87,y:65,size:64,opacity:75},"btnRT":{x:96,y:65,size:64,opacity:75},"btnX":{x:87,y:82,size:64,opacity:75},"btnLB":{x:96,y:82,size:64,opacity:75},"btnA":{x:96,y:94,size:64,opacity:75},"btnBack":{x:42,y:5,size:58,opacity:75},"btnStart":{x:51,y:5,size:58,opacity:75}};
+const controlDefaults={"leftStick":{x:14,y:76,size:140,opacity:75},"rightStick":{x:77,y:76,size:140,opacity:75},"btnRB":{x:87,y:65,size:64,opacity:75},"btnRT":{x:96,y:65,size:64,opacity:75},"btnLT":{x:7,y:8,size:64,opacity:75},"btnX":{x:87,y:82,size:64,opacity:75},"btnA":{x:96,y:94,size:64,opacity:75},"btnLB":{x:7,y:19,size:64,opacity:75},"dpadUp":{x:13,y:53,size:48,opacity:75},"dpadDown":{x:13,y:68,size:48,opacity:75},"dpadLeft":{x:8,y:60.5,size:48,opacity:75},"dpadRight":{x:18,y:60.5,size:48,opacity:75},"btnBack":{x:42,y:91,size:58,opacity:75},"btnStart":{x:52,y:91,size:58,opacity:75}};
 let controlLayout=JSON.parse(localStorage.getItem("ct-controls")||"null")||JSON.parse(JSON.stringify(controlDefaults));
+let xboxLayout=localStorage.getItem("ct-xbox-layout")==="1";
 function applyControlLayout(){for(const [id,p] of Object.entries(controlLayout)){const el=$(id);if(!el)continue;el.style.left=p.x+"%";el.style.top=p.y+"%";el.style.right="auto";el.style.bottom="auto";el.style.width=p.size+"px";el.style.height=p.size+"px";el.style.opacity=p.opacity/100;if(id.endsWith("Stick")){el.querySelector(".nub").style.width=Math.max(30,p.size*.34)+"px";el.querySelector(".nub").style.height=Math.max(30,p.size*.34)+"px";}}}
 function openDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB_NAME,DB_VERSION);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains("files"))req.result.createObjectStore("files",{keyPath:"key"});if(!req.result.objectStoreNames.contains("meta"))req.result.createObjectStore("meta",{keyPath:"key"});};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
 function put(store,value){return new Promise((resolve,reject)=>{const tx=db.transaction(store,"readwrite");tx.objectStore(store).put(value);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});}
@@ -164,6 +177,11 @@ bindPad("btnA",()=>{key("Space",true);key("Enter",true);},()=>{key("Space",false
 bindPad("btnX",()=>mouse(0,true),()=>mouse(0,false));
 bindPad("btnRB",()=>mouse(2,true),()=>mouse(2,false));
 bindPad("btnLB",()=>key("KeyE",true),()=>key("KeyE",false));
+bindPad("btnLT",()=>key("ControlLeft",true),()=>key("ControlLeft",false));
+bindPad("dpadUp",()=>key("ArrowUp",true),()=>key("ArrowUp",false));
+bindPad("dpadDown",()=>key("ArrowDown",true),()=>key("ArrowDown",false));
+bindPad("dpadLeft",()=>key("ArrowLeft",true),()=>key("ArrowLeft",false));
+bindPad("dpadRight",()=>key("ArrowRight",true),()=>key("ArrowRight",false));
 bindPad("btnBack",()=>key("Escape",true),()=>key("Escape",false));
 bindPad("btnStart",()=>key("Enter",true),()=>key("Enter",false));
 $("btnRT").addEventListener("pointerdown",e=>{e.preventDefault();rtOn=!rtOn;$("btnRT").classList.toggle("active",rtOn);key("ShiftLeft",rtOn);});
@@ -175,7 +193,10 @@ function bindStick(id,kind){const el=$(id),nub=el.querySelector(".nub");let poin
  });
  el.addEventListener("pointerup",release);el.addEventListener("pointercancel",release);el.addEventListener("lostpointercapture",release);
 }
-bindStick("leftStick","move");bindStick("rightStick","look");applyControlLayout();window.addEventListener("resize",applyCanvasDisplay);
+bindStick("leftStick","move");bindStick("rightStick","look");applyControlLayout();
+function setXboxLayout(v){xboxLayout=v;localStorage.setItem("ct-xbox-layout",v?"1":"0");$("xboxLayoutToggle").classList.toggle("on",v);$("xboxLayoutToggle").setAttribute("aria-checked",String(v));$("controls").classList.toggle("xbox-layout",v);for(const id of ["btnLT","btnLB","dpadUp","dpadDown","dpadLeft","dpadRight"]){$(id).style.display=v?"flex":"none";}}
+$("xboxLayoutToggle").addEventListener("click",()=>setXboxLayout(!xboxLayout));setXboxLayout(xboxLayout);
+window.addEventListener("resize",applyCanvasDisplay);
 let fpsLoopRunning=false;function startFPS(){if(fpsLoopRunning||!fpsEnabled)return;fpsLoopRunning=true;let last=performance.now(),frames=0;function tick(now){if(!fpsEnabled){fpsLoopRunning=false;return;}frames++;if(now-last>=1000){$("fps").textContent="FPS: "+Math.round(frames*1000/(now-last));frames=0;last=now;}requestAnimationFrame(tick);}requestAnimationFrame(tick);}
 function applyCanvasDisplay(){const c=$("unity-canvas");if(!c)return;const [w,h]=resolution.split("x").map(Number),aspect=w/h;if(stretchScreen){c.style.width="100vw";c.style.height="100vh";}else{const vw=innerWidth,vh=innerHeight,scale=Math.min(vw/w,vh/h);c.style.width=Math.floor(w*scale)+"px";c.style.height=Math.floor(h*scale)+"px";}c.style.objectFit="fill";}
 function setStretch(v){stretchScreen=v;localStorage.setItem("ct-stretch",v?"1":"0");$("stretchToggle").classList.toggle("on",v);$("stretchToggle").setAttribute("aria-checked",String(v));if($("game").style.display==="flex")applyCanvasDisplay();}
