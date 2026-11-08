@@ -1,312 +1,159 @@
 <!DOCTYPE html>
-<html lang="en-us">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes">
-    <title>Clustertruck</title>
-    <link rel="shortcut icon" href="TemplateData/favicon.ico">
-    <link rel="stylesheet" href="TemplateData/style.css">
-    <style>
-      /* Overrides TemplateData/style.css, which is what draws the bordered 960x600 box and the
-         grey footer bar. Loaded after it so these win without editing that file. */
-      html, body {
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-        background: #000;
-      }
-
-      #unity-container {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        transform: none;
-      }
-
-      #unity-canvas {
-        display: block;
-        width: 100%;
-        height: 100%;
-        background: #000;
-        outline: none;
-      }
-
-      /* The Unity logo / fullscreen button / build title strip. */
-      #unity-footer { display: none; }
-
-      #unity-loading-bar {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        display: none;
-      }
-
-      #unity-status {
-        margin-top: 12px;
-        width: 154px;
-        text-align: center;
-        font-family: arial, sans-serif;
-        font-size: 12px;
-        color: #bbb;
-        white-space: nowrap;
-      }
-
-      #unity-warning {
-        position: absolute;
-        top: 12px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: transparent;
-      }
-
-      #unity-error {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        display: none;
-        max-width: 80%;
-        padding: 16px 20px;
-        background: #2a1414;
-        border: 1px solid #a33;
-        color: #f4d5d5;
-        font-family: arial, sans-serif;
-        font-size: 14px;
-        line-height: 1.5;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="unity-container">
-      <canvas id="unity-canvas" tabindex="-1"></canvas>
-      <div id="unity-loading-bar">
-        <div id="unity-logo"></div>
-        <div id="unity-progress-bar-empty">
-          <div id="unity-progress-bar-full"></div>
-        </div>
-        <div id="unity-status"></div>
-      </div>
-      <div id="unity-warning"> </div>
-      <div id="unity-error"></div>
-    </div>
-    <script>
-
-      var container = document.querySelector("#unity-container");
-      var canvas = document.querySelector("#unity-canvas");
-      var loadingBar = document.querySelector("#unity-loading-bar");
-      var progressBarFull = document.querySelector("#unity-progress-bar-full");
-      var statusText = document.querySelector("#unity-status");
-      var warningBanner = document.querySelector("#unity-warning");
-      var errorBox = document.querySelector("#unity-error");
-
-      function showError(msg) {
-        loadingBar.style.display = "none";
-        errorBox.style.display = "block";
-        errorBox.innerHTML = msg;
-      }
-
-      // Shows a temporary message banner/ribbon for a few seconds, or
-      // a permanent error message on top of the canvas if type=='error'.
-      function unityShowBanner(msg, type) {
-        function updateBannerVisibility() {
-          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
-        }
-        var div = document.createElement('div');
-        div.innerHTML = msg;
-        warningBanner.appendChild(div);
-        if (type == 'error') div.style = 'background: red; padding: 10px;';
-        else {
-          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
-          setTimeout(function() {
-            warningBanner.removeChild(div);
-            updateBannerVisibility();
-          }, 5000);
-        }
-        updateBannerVisibility();
-      }
-
-      var buildUrl = "Build";
-      var loaderUrl = buildUrl + "/ClusterTruckWEB.loader.js";
-      var dataUrl = buildUrl + "/ClusterTruckWEB.data";
-      var wasmUrl = buildUrl + "/ClusterTruckWEB.wasm";
-
-      // ---------------------------------------------------------------------------------------
-      // Split-file reassembly.
-      //
-      // ClusterTruckWEB.data (103 MB) and ClusterTruckWEB.wasm (84 MB) are each too big for hosts
-      // that cap individual files (GitHub's limit is 100 MB), so they are uploaded as sequential
-      // byte-range chunks named  <file>.part1, .part2, ...  This downloads the chunks in order,
-      // concatenates them into a Blob, and hands Unity a blob: URL instead of the real path.
-      //
-      // If no .part1 exists next to a file, that file is used directly and untouched -- so this
-      // same page works both on a host with only the split parts and locally with the whole files.
-      //
-      // The wasm Blob MUST carry type "application/wasm": blob: URLs report their Blob's type as
-      // the Content-Type, and WebAssembly.instantiateStreaming rejects anything else.
-      // ---------------------------------------------------------------------------------------
-
-      var MAX_PARTS = 128;
-
-      async function headOk(url) {
-        try {
-          var res = await fetch(url, { method: "HEAD" });
-          return res.ok ? res : null;
-        } catch (e) {
-          return null;
-        }
-      }
-
-      // Probe <url>.part1, .part2, ... until one is missing. Returns [{url, size}].
-      async function discoverParts(url) {
-        var parts = [];
-        for (var i = 1; i <= MAX_PARTS; i++) {
-          var partUrl = url + ".part" + i;
-          var res = await headOk(partUrl);
-          if (!res) break;
-          var len = parseInt(res.headers.get("content-length") || "0", 10);
-          parts.push({ url: partUrl, size: isNaN(len) ? 0 : len });
-        }
-        return parts;
-      }
-
-      // Streams one part, reporting bytes as they arrive so the bar moves during a long chunk.
-      async function fetchPart(url, onBytes) {
-        var res = await fetch(url);
-        if (!res.ok) throw new Error("Failed to fetch " + url + " (HTTP " + res.status + ")");
-        if (!res.body) {
-          var buf = await res.arrayBuffer();
-          onBytes(buf.byteLength);
-          return buf;
-        }
-        var reader = res.body.getReader();
-        var chunks = [];
-        var total = 0;
-        while (true) {
-          var step = await reader.read();
-          if (step.done) break;
-          chunks.push(step.value);
-          total += step.value.length;
-          onBytes(step.value.length);
-        }
-        var out = new Uint8Array(total);
-        var offset = 0;
-        for (var i = 0; i < chunks.length; i++) {
-          out.set(chunks[i], offset);
-          offset += chunks[i].length;
-        }
-        return out;
-      }
-
-      var objectUrls = [];
-
-      async function resolveUrl(url, mimeType, label, plan, onBytes) {
-        var parts = plan[url];
-        if (!parts || !parts.length) return url;   // not split - use the file as-is
-
-        statusText.textContent = "Assembling " + label + "...";
-        var buffers = [];
-        for (var i = 0; i < parts.length; i++) {
-          statusText.textContent = "Downloading " + label + " (" + (i + 1) + "/" + parts.length + ")";
-          buffers.push(await fetchPart(parts[i].url, onBytes));
-        }
-        var blob = new Blob(buffers, { type: mimeType });
-        var objUrl = URL.createObjectURL(blob);
-        objectUrls.push(objUrl);
-        return objUrl;
-      }
-
-      async function boot() {
-        loadingBar.style.display = "block";
-        statusText.textContent = "Checking files...";
-
-        // Discover both up front so total byte count (and therefore the progress bar) is accurate.
-        var plan = {};
-        plan[dataUrl] = await discoverParts(dataUrl);
-        plan[wasmUrl] = await discoverParts(wasmUrl);
-
-        var totalBytes = 0;
-        Object.keys(plan).forEach(function (k) {
-          plan[k].forEach(function (p) { totalBytes += p.size; });
-        });
-
-        var loadedBytes = 0;
-        function onBytes(n) {
-          loadedBytes += n;
-          if (totalBytes > 0) {
-            // Reserve the last 10% of the bar for Unity's own startup.
-            var frac = Math.min(loadedBytes / totalBytes, 1);
-            progressBarFull.style.width = (frac * 90) + "%";
-          }
-        }
-
-        var resolvedData = await resolveUrl(dataUrl, "application/octet-stream", "game data", plan, onBytes);
-        var resolvedWasm = await resolveUrl(wasmUrl, "application/wasm", "engine", plan, onBytes);
-
-        statusText.textContent = "Starting...";
-
-        var config = {
-          dataUrl: resolvedData,
-          frameworkUrl: buildUrl + "/ClusterTruckWEB.framework.js",
-          codeUrl: resolvedWasm,
-          streamingAssetsUrl: "StreamingAssets",
-          companyName: "Landfall",
-          productName: "Clustertruck",
-          productVersion: "1.0",
-          showBanner: unityShowBanner,
-        };
-
-        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-          container.className = "unity-mobile";
-          canvas.className = "unity-mobile";
-          // Uncomment to lower render resolution on mobile for performance:
-          // config.devicePixelRatio = 1;
-        }
-
-        // The canvas is sized by CSS to fill the window. Unity keeps the WebGL render target matched
-        // to the canvas DOM size (scaled by devicePixelRatio) on its own, so the game renders at the
-        // full window resolution and follows window resizes with no extra code.
-
-        await new Promise(function (resolve, reject) {
-          var script = document.createElement("script");
-          script.src = loaderUrl;
-          script.onload = resolve;
-          script.onerror = function () { reject(new Error("Failed to load " + loaderUrl)); };
-          document.body.appendChild(script);
-        });
-
-        var unityInstance = await createUnityInstance(canvas, config, function (progress) {
-          progressBarFull.style.width = (90 + progress * 10) + "%";
-        });
-
-        loadingBar.style.display = "none";
-
-        // The Blobs are ~190 MB combined; releasing them once Unity has read them hands that memory
-        // back rather than holding it for the whole session.
-        objectUrls.forEach(function (u) { URL.revokeObjectURL(u); });
-        objectUrls = [];
-
-        // The footer's fullscreen button is gone, so expose real (F11-style) fullscreen on a key
-        // instead. The canvas already fills the page without it.
-        window.addEventListener("keydown", function (e) {
-          if (e.key === "F" || e.key === "f") {
-            if (e.target === document.body || e.target === canvas) {
-              unityInstance.SetFullscreen(1);
-            }
-          }
-        });
-      }
-
-      boot().catch(function (err) {
-        showError("<b>Failed to start.</b><br>" + (err && err.message ? err.message : err));
-        console.error(err);
-      });
-
-    </script>
-  </body>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Clustertruck Android</title>
+<style>
+:root{color-scheme:dark;font-family:Arial,Helvetica,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#090909;color:#f4f4f4;touch-action:none}
+button{font:inherit;color:inherit;border:1px solid #333;background:#191919;border-radius:12px;padding:14px 20px}
+#launcher{height:100%;overflow:auto;display:flex;align-items:center;justify-content:center;padding:22px}
+.panel{width:min(100%,430px);background:#111;border:1px solid #292929;border-radius:20px;padding:24px;box-shadow:0 18px 60px #0009}
+h1{margin:0 0 6px;font-size:30px;letter-spacing:-1px}
+.sub{color:#999;font-size:13px;margin-bottom:24px}
+#installBtn{width:100%;background:#e8e8e8;color:#111;font-weight:800;font-size:17px;border:0;padding:17px}
+#progressWrap{height:5px;background:#292929;border-radius:8px;margin-top:14px;overflow:hidden;display:none}
+#progress{height:100%;width:0;background:#e8e8e8}
+#status{font-size:12px;color:#999;margin-top:9px;min-height:16px}
+.section{border-top:1px solid #292929;margin-top:24px;padding-top:18px}
+.sectionTitle{font-size:12px;color:#888;letter-spacing:1.5px;font-weight:700;margin-bottom:14px}
+.setting{display:flex;align-items:center;justify-content:space-between;padding:8px 0}
+.setting span{font-size:14px}
+.switch{width:48px;height:28px;padding:3px;border:0;border-radius:20px;background:#444;transition:.15s}
+.switch:after{content:"";display:block;width:22px;height:22px;border-radius:50%;background:white;transition:.15s}
+.switch.on{background:#e34b4b}
+.switch.on:after{transform:translateX(20px)}
+#game{display:none;position:fixed;inset:0;background:#000}
+#unity-canvas{width:100%;height:100%;display:block;outline:0}
+#fps{display:none;position:absolute;left:10px;top:8px;color:#f22;font-family:Arial,sans-serif;font-size:15px;font-weight:700;z-index:20;pointer-events:none;text-shadow:0 1px 2px #000}
+#gameError{display:none;position:absolute;left:5%;right:5%;top:40%;padding:16px;background:#211;border:1px solid #933;color:#faa;z-index:40;font-size:13px}
+#controls{display:none;position:absolute;inset:0;pointer-events:none;z-index:15}
+.stick{position:absolute;width:116px;height:116px;border:2px solid #ffffff66;background:#1117;border-radius:50%;pointer-events:auto;touch-action:none;display:flex;align-items:center;justify-content:center}
+.stick .nub{width:46px;height:46px;border-radius:50%;background:#ffffff55;border:1px solid #ffffff99}
+#leftStick{left:22px;bottom:24px}
+#rightStick{right:150px;bottom:24px}
+#buttons{position:absolute;right:16px;bottom:18px;width:126px;height:150px;pointer-events:none}
+.pad{position:absolute;width:48px;height:48px;padding:0;border-radius:50%;background:#151515bb;border:1px solid #ffffff99;font-weight:800;font-size:14px;pointer-events:auto;touch-action:none;box-shadow:0 2px 8px #0008}
+.pad.active{background:#b52b2b;color:white}
+#btnA{right:0;bottom:0}
+#btnX{left:0;bottom:48px}
+#btnRT{right:0;top:0}
+#btnRB{left:0;top:0}
+#btnLB{left:39px;top:48px}
+#exit{position:absolute;right:10px;top:10px;z-index:25;pointer-events:auto;background:#111b;padding:7px 11px;font-size:12px}
+@media(max-width:520px){.stick{width:100px;height:100px}#rightStick{right:142px}#buttons{transform:scale(.9);transform-origin:bottom right}}
+</style>
+</head>
+<body>
+<div id="launcher">
+ <main class="panel">
+  <h1>CLUSTERTRUCK</h1>
+  <div class="sub">ANDROID LAUNCHER</div>
+  <button id="installBtn">INSTALL</button>
+  <div id="progressWrap"><div id="progress"></div></div>
+  <div id="status">Game files are downloaded once and kept in this browser's storage.</div>
+  <div class="section">
+   <div class="sectionTitle">SETTINGS</div>
+   <div class="setting"><span>Show FPS counter</span><button class="switch" id="fpsToggle" role="switch" aria-checked="false" aria-label="Show FPS counter"></button></div>
+  </div>
+ </main>
+</div>
+<div id="game">
+ <canvas id="unity-canvas" tabindex="-1"></canvas>
+ <div id="fps">FPS: --</div>
+ <button id="exit">EXIT</button>
+ <div id="controls">
+  <div class="stick" id="leftStick"><div class="nub"></div></div>
+  <div class="stick" id="rightStick"><div class="nub"></div></div>
+  <div id="buttons">
+   <button class="pad" id="btnRT">RT</button>
+   <button class="pad" id="btnX">X</button>
+   <button class="pad" id="btnA">A</button>
+   <button class="pad" id="btnRB">RB</button>
+   <button class="pad" id="btnLB">LB</button>
+  </div>
+ </div>
+ <div id="gameError"></div>
+</div>
+<script>
+const BASE="Build/";
+const DB_NAME="clustertruck-android-install";
+const DB_VERSION=1;
+const ASSETS=[
+ {id:"data",url:BASE+"ClusterTruckWEB.data",mime:"application/octet-stream"},
+ {id:"wasm",url:BASE+"ClusterTruckWEB.wasm",mime:"application/wasm"},
+ {id:"loader",url:BASE+"ClusterTruckWEB.loader.js",mime:"text/javascript"},
+ {id:"framework",url:BASE+"ClusterTruckWEB.framework.js",mime:"text/javascript"}
+];
+const $=id=>document.getElementById(id);
+let db=null,unityInstance=null,installed=false,rtOn=false,fpsEnabled=localStorage.getItem("ct-fps")==="1";
+function openDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB_NAME,DB_VERSION);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains("files"))req.result.createObjectStore("files",{keyPath:"key"});if(!req.result.objectStoreNames.contains("meta"))req.result.createObjectStore("meta",{keyPath:"key"});};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
+function put(store,value){return new Promise((resolve,reject)=>{const tx=db.transaction(store,"readwrite");tx.objectStore(store).put(value);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});}
+function get(store,key){return new Promise((resolve,reject)=>{const req=db.transaction(store).objectStore(store).get(key);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
+function setStatus(s){$("status").textContent=s;}
+function setProgress(p){$("progressWrap").style.display="block";$("progress").style.width=Math.max(0,Math.min(100,p))+"%";}
+async function discover(url){const parts=[];for(let i=1;i<=128;i++){const r=await fetch(url+".part"+i,{method:"HEAD"});if(!r.ok)break;parts.push({url:url+".part"+i,size:Number(r.headers.get("content-length"))||0});}return parts;}
+async function fetchBuffer(url){const r=await fetch(url);if(!r.ok)throw new Error("Download failed ("+r.status+"): "+url);return await r.arrayBuffer();}
+async function installAsset(asset,progress){
+ const parts=(asset.id==="data"||asset.id==="wasm")?await discover(asset.url):[];
+ if(parts.length){
+  await put("meta",{key:asset.id,parts:parts.length,mime:asset.mime});
+  for(let i=0;i<parts.length;i++){const b=await fetchBuffer(parts[i].url);await put("files",{key:asset.id+":"+i,buffer:b});progress(b.byteLength,parts[i].url.split("/").pop());}
+ }else{
+  const b=await fetchBuffer(asset.url);await put("meta",{key:asset.id,parts:1,mime:asset.mime,direct:true});await put("files",{key:asset.id+":0",buffer:b});progress(b.byteLength,asset.url.split("/").pop());
+ }
+}
+async function install(){
+ $("installBtn").disabled=true;$("installBtn").textContent="INSTALLING…";
+ try{
+  db=await openDB();
+  if(navigator.storage&&navigator.storage.persist)await navigator.storage.persist();
+  let loaded=0,total=0;
+  for(const a of ASSETS){if(a.id==="loader"||a.id==="framework"){const r=await fetch(a.url,{method:"HEAD"});total+=Number(r.headers.get("content-length"))||1;}else{const p=await discover(a.url);if(p.length)total+=p.reduce((n,x)=>n+x.size,0);else{const r=await fetch(a.url,{method:"HEAD"});total+=Number(r.headers.get("content-length"))||1;}}}
+  for(const a of ASSETS){setStatus("Downloading "+a.id+"…");await installAsset(a,(bytes)=>{loaded+=bytes;setProgress(total?loaded/total*100:0);});}
+  await put("meta",{key:"installed",value:true});
+  installed=true;$("installBtn").textContent="PLAY";setStatus("Installation complete. Your files are saved on this device.");$("progress").style.width="100%";
+ }catch(e){console.error(e);setStatus("Install failed: "+e.message);$("installBtn").textContent="RETRY INSTALL";}finally{$("installBtn").disabled=false;}
+}
+async function readAsset(id){const meta=await get("meta",id);if(!meta)throw new Error("Missing installed file: "+id);const buffers=[];for(let i=0;i<meta.parts;i++){const row=await get("files",id+":"+i);if(!row)throw new Error("Missing part "+(i+1)+" of "+id);buffers.push(row.buffer);}return new Blob(buffers,{type:meta.mime});}
+async function play(){
+ $("launcher").style.display="none";$("game").style.display="block";$("controls").style.display="block";$("fps").style.display=fpsEnabled?"block":"none";
+ try{
+  db=db||await openDB();
+  const [data,wasm,loader,framework]=await Promise.all([readAsset("data"),readAsset("wasm"),readAsset("loader"),readAsset("framework")]);
+  const dataUrl=URL.createObjectURL(data),wasmUrl=URL.createObjectURL(wasm),loaderUrl=URL.createObjectURL(loader),frameworkUrl=URL.createObjectURL(framework);
+  const script=document.createElement("script");script.src=loaderUrl;
+  await new Promise((resolve,reject)=>{script.onload=resolve;script.onerror=()=>reject(new Error("Unity loader could not start"));document.body.appendChild(script);});
+  unityInstance=await createUnityInstance($("unity-canvas"),{dataUrl,codeUrl:wasmUrl,frameworkUrl,streamingAssetsUrl:BASE,companyName:"Landfall",productName:"Clustertruck",productVersion:"1.0"},p=>setStatus("Starting game… "+Math.round(p*100)+"%"));
+  setTimeout(()=>{URL.revokeObjectURL(dataUrl);URL.revokeObjectURL(wasmUrl);URL.revokeObjectURL(loaderUrl);URL.revokeObjectURL(frameworkUrl);},5000);
+  startFPS();
+ }catch(e){console.error(e);$("gameError").style.display="block";$("gameError").textContent="Could not start the game: "+e.message;}
+}
+function key(code,down){const type=down?"keydown":"keyup";window.dispatchEvent(new KeyboardEvent(type,{key:code==="Space"?" ":code==="ShiftLeft"?"Shift":code.replace("Key","").toLowerCase(),code,bubbles:true}));}
+function mouse(button,down){const type=down?"mousedown":"mouseup";$("unity-canvas").dispatchEvent(new MouseEvent(type,{button,bubbles:true,clientX:innerWidth/2,clientY:innerHeight/2}));}
+function bindPad(id,down,up){const el=$(id);el.addEventListener("pointerdown",e=>{e.preventDefault();el.setPointerCapture(e.pointerId);el.classList.add("active");down();});const release=e=>{el.classList.remove("active");up();};el.addEventListener("pointerup",release);el.addEventListener("pointercancel",release);el.addEventListener("lostpointercapture",release);}
+bindPad("btnA",()=>key("Space",true),()=>key("Space",false));
+bindPad("btnX",()=>mouse(0,true),()=>mouse(0,false));
+bindPad("btnRB",()=>mouse(2,true),()=>mouse(2,false));
+bindPad("btnLB",()=>key("KeyE",true),()=>key("KeyE",false));
+$("btnRT").addEventListener("pointerdown",e=>{e.preventDefault();rtOn=!rtOn;$("btnRT").classList.toggle("active",rtOn);key("ShiftLeft",rtOn);});
+function bindStick(id,kind){const el=$(id),nub=el.querySelector(".nub");let pointer=null,lastX=0,lastY=0,keys=new Set();function release(){keys.forEach(k=>key(k,false));keys.clear();pointer=null;nub.style.transform="translate(0,0)";}
+ el.addEventListener("pointerdown",e=>{e.preventDefault();pointer=e.pointerId;el.setPointerCapture(pointer);lastX=e.clientX;lastY=e.clientY;});
+ el.addEventListener("pointermove",e=>{if(pointer!==e.pointerId)return;const r=el.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=e.clientX-cx,dy=e.clientY-cy;const max=r.width*.32,len=Math.hypot(dx,dy);if(len>max){dx=dx/len*max;dy=dy/len*max;}nub.style.transform="translate("+dx+"px,"+dy+"px)";
+ if(kind==="move"){const next=new Set();if(dy< -18)next.add("KeyW");if(dy>18)next.add("KeyS");if(dx< -18)next.add("KeyA");if(dx>18)next.add("KeyD");keys.forEach(k=>{if(!next.has(k))key(k,false);});next.forEach(k=>{if(!keys.has(k))key(k,true);});keys=next;}
+ else {const mx=e.clientX-lastX,my=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;$("unity-canvas").dispatchEvent(new MouseEvent("mousemove",{movementX:mx,movementY:my,clientX:e.clientX,clientY:e.clientY,bubbles:true}));}
+ });
+ el.addEventListener("pointerup",release);el.addEventListener("pointercancel",release);el.addEventListener("lostpointercapture",release);
+}
+bindStick("leftStick","move");bindStick("rightStick","look");
+function startFPS(){let last=performance.now(),frames=0;function tick(now){if(!fpsEnabled)return;frames++;if(now-last>=1000){$("fps").textContent="FPS: "+Math.round(frames*1000/(now-last));frames=0;last=now;}requestAnimationFrame(tick);}requestAnimationFrame(tick);}
+function setFPS(v){fpsEnabled=v;localStorage.setItem("ct-fps",v?"1":"0");$("fpsToggle").classList.toggle("on",v);$("fpsToggle").setAttribute("aria-checked",String(v));}
+$("fpsToggle").addEventListener("click",()=>setFPS(!fpsEnabled));setFPS(fpsEnabled);
+$("installBtn").addEventListener("click",async()=>{if(installed){play();return;}db=await openDB();const m=await get("meta","installed");if(m&&m.value){installed=true;play();}else install();});
+$("exit").addEventListener("click",()=>{if(unityInstance&&unityInstance.Quit)unityInstance.Quit();unityInstance=null;$("game").style.display="none";$("launcher").style.display="flex";rtOn=false;$("btnRT").classList.remove("active");});
+(async()=>{try{db=await openDB();const m=await get("meta","installed");if(m&&m.value){installed=true;$("installBtn").textContent="PLAY";setStatus("Already installed. Your game files are saved on this device.");}}catch(e){setStatus("Browser storage unavailable: "+e.message);}})();
+</script>
+</body>
 </html>
