@@ -36,12 +36,12 @@ h1{margin:0 0 6px;font-size:30px;letter-spacing:-1px}
 #leftStick,#rightStick{left:0;top:0;bottom:auto;right:auto;width:140px;height:140px;transform:translate(-50%,-50%)}
 #buttons{position:absolute;inset:0;width:auto;height:auto;pointer-events:none}
 .pad{position:absolute;left:0;top:0;width:64px;height:64px;padding:0;border-radius:50%;background:#151515bb;border:1px solid #ffffff99;font-weight:800;font-size:16px;pointer-events:auto;touch-action:none;box-shadow:0 2px 8px #0008;transform:translate(-50%,-50%)}
-.pad.active{background:#b52b2b;color:white}
+.pad.active{background:#b52b2b;color:white}.gyro-hidden{display:none!important}
 #btnA,#btnRT,#btnLT,#btnRB,#btnLB,#dpadUp,#dpadDown,#dpadLeft,#dpadRight{right:auto;bottom:auto}
 .dpad{display:none;font-size:22px}
 #btnBack{top:auto!important;left:42%!important;right:auto!important;bottom:10px!important}#btnStart{top:auto!important;left:52%!important;right:auto!important;bottom:10px!important}
 #leftStick{left:8%;top:76%}#rightStick{left:68%;top:76%}
-#btnRB{left:92%;top:21%}#btnRT{left:92%;top:10%}#btnLT{left:8%;top:10%}#btnLB{left:8%;top:21%}#btnA{left:92%;top:58%}
+#btnRB{left:92%;top:28%}#btnRT{left:92%;top:10%}#btnLT{left:8%;top:10%}#btnLB{left:8%;top:28%}#btnA{left:92%;top:58%}
 #exit,#btnBack,#btnStart{position:absolute;top:10px;z-index:25;pointer-events:auto;background:#111b;padding:7px 11px;font-size:12px}#exit{right:10px}#btnStart{right:74px}#btnBack{right:138px}
 @media(max-width:520px){.stick{width:112px;height:112px}.pad{width:54px;height:54px;font-size:13px}}
 </style>
@@ -109,7 +109,7 @@ let db=null,unityInstance=null,installed=false,rtOn=false,fpsEnabled=localStorag
 let resolution=localStorage.getItem("ct-resolution")||"1600x720";
 let renderScale=Number(localStorage.getItem("ct-render-scale")||100);
 let stretchScreen=localStorage.getItem("ct-stretch")==="1";
-const controlDefaults={"leftStick":{x:14,y:76,size:140,opacity:75},"rightStick":{x:78,y:76,size:140,opacity:75},"btnLT":{x:8,y:10,size:64,opacity:75},"btnLB":{x:8,y:21,size:64,opacity:75},"btnRT":{x:92,y:10,size:64,opacity:75},"btnRB":{x:92,y:21,size:64,opacity:75},"btnA":{x:92,y:58,size:64,opacity:75},"dpadUp":{x:14,y:51,size:48,opacity:75},"dpadDown":{x:14,y:66,size:48,opacity:75},"dpadLeft":{x:9,y:58.5,size:48,opacity:75},"dpadRight":{x:19,y:58.5,size:48,opacity:75},"btnBack":{x:42,y:91,size:58,opacity:75},"btnStart":{x:52,y:91,size:58,opacity:75}};
+const controlDefaults={"leftStick":{x:14,y:76,size:140,opacity:75},"rightStick":{x:78,y:76,size:140,opacity:75},"btnLT":{x:8,y:10,size:64,opacity:75},"btnLB":{x:8,y:28,size:64,opacity:75},"btnRT":{x:92,y:10,size:64,opacity:75},"btnRB":{x:92,y:28,size:64,opacity:75},"btnA":{x:92,y:58,size:64,opacity:75},"dpadUp":{x:14,y:51,size:48,opacity:75},"dpadDown":{x:14,y:66,size:48,opacity:75},"dpadLeft":{x:9,y:58.5,size:48,opacity:75},"dpadRight":{x:19,y:58.5,size:48,opacity:75},"btnBack":{x:42,y:91,size:58,opacity:75},"btnStart":{x:52,y:91,size:58,opacity:75}};
 let controlLayout=JSON.parse(localStorage.getItem("ct-controls-v2")||"null")||JSON.parse(JSON.stringify(controlDefaults));
 let gyroEnabled=false,gyroBase=null,gyroLast=0;
 function applyControlLayout(){
@@ -161,11 +161,10 @@ async function play(){
   const [baseW,baseH]=resolution.split("x").map(Number);
   const canvas=$("unity-canvas");
   canvas.addEventListener("pointerdown",focusGame);
-  canvas.width=Math.max(1,Math.round(baseW*renderScale/100));
-  canvas.height=Math.max(1,Math.round(baseH*renderScale/100));
+  resizeCanvasBuffer();
   applyCanvasDisplay();
   await new Promise((resolve,reject)=>{script.onload=resolve;script.onerror=()=>reject(new Error("Unity loader could not start"));document.body.appendChild(script);});
-  unityInstance=await createUnityInstance($("unity-canvas"),{dataUrl,codeUrl:wasmUrl,frameworkUrl,streamingAssetsUrl:BASE,companyName:"Landfall",productName:"Clustertruck",productVersion:"1.0",matchWebGLToCanvasSize:false,webglContextAttributes:{antialias:false,alpha:false,preserveDrawingBuffer:false,powerPreference:"low-power"}},p=>setStatus("Starting game… "+Math.round(p*100)+"%"));
+  unityInstance=await createUnityInstance($("unity-canvas"),{dataUrl,codeUrl:wasmUrl,frameworkUrl,streamingAssetsUrl:BASE,companyName:"Landfall",productName:"Clustertruck",productVersion:"1.0",matchWebGLToCanvasSize:false,webglContextAttributes:{antialias:false,alpha:false,preserveDrawingBuffer:false,powerPreference:"high-performance"}},p=>setStatus("Starting game… "+Math.round(p*100)+"%"));
   setTimeout(()=>{URL.revokeObjectURL(dataUrl);URL.revokeObjectURL(wasmUrl);URL.revokeObjectURL(loaderUrl);URL.revokeObjectURL(frameworkUrl);},5000);
   startFPS();
  }catch(e){console.error(e);$("gameError").style.display="block";$("gameError").textContent="Could not start the game: "+e.message;}
@@ -196,17 +195,20 @@ function bindStick(id,kind){const el=$(id),nub=el.querySelector(".nub");let poin
 }
 bindStick("leftStick","move");bindStick("rightStick","look");applyControlLayout();
 function setGyro(v){gyroEnabled=v;const sw=$("gyroToggle");sw.classList.toggle("on",v);sw.setAttribute("aria-checked",String(v));$("rightStick").classList.toggle("gyro-hidden",v);gyroBase=null;gyroLast=0;if(v){if(!("DeviceOrientationEvent" in window)){setGyro(false);alert("Gyroscope sensors are not available in this browser.");return;}const start=()=>{window.addEventListener("deviceorientation",onGyro,{passive:true});};if(typeof DeviceOrientationEvent.requestPermission==="function"){DeviceOrientationEvent.requestPermission().then(x=>{if(x==="granted")start();else setGyro(false);}).catch(()=>setGyro(false));}else start();}else window.removeEventListener("deviceorientation",onGyro);}
-function onGyro(e){if(!gyroEnabled||e.gamma==null||e.beta==null)return;const now=performance.now();if(now-gyroLast<16)return;gyroLast=now;if(!gyroBase){gyroBase={gamma:e.gamma,beta:e.beta};return;}const dx=Math.max(-35,Math.min(35,(e.gamma-gyroBase.gamma)*2.2));const dy=Math.max(-25,Math.min(25,(e.beta-gyroBase.beta)*1.5));const x=innerWidth/2,y=innerHeight/2;const ev=new MouseEvent("mousemove",{bubbles:true,cancelable:true,clientX:x+dx*8,clientY:y+dy*8,movementX:dx*2,movementY:dy*2});window.dispatchEvent(ev);document.dispatchEvent(ev);$("unity-canvas").dispatchEvent(ev);}
+function angleDelta(a,b){let d=a-b;while(d>180)d-=360;while(d< -180)d+=360;return d;}
+function onGyro(e){if(!gyroEnabled||e.gamma==null||e.beta==null)return;const now=performance.now();if(now-gyroLast<16)return;gyroLast=now;const angle=(screen.orientation&&typeof screen.orientation.angle==="number")?screen.orientation.angle:0;let gx=e.gamma,by=e.beta;if(angle===90){gx=e.beta;by=-e.gamma;}else if(angle===270){gx=-e.beta;by=e.gamma;}if(!gyroBase){gyroBase={gamma:gx,beta:by};return;}let dx=angleDelta(gx,gyroBase.gamma),dy=angleDelta(by,gyroBase.beta);gyroBase={gamma:gx,beta:by};if(Math.abs(dx)<0.55)dx=0;if(Math.abs(dy)<0.55)dy=0;const mx=Math.max(-12,Math.min(12,dx*2.0)),my=Math.max(-12,Math.min(12,dy*2.0));if(!mx&&!my)return;const x=innerWidth/2,y=innerHeight/2;const ev=new MouseEvent("mousemove",{bubbles:true,cancelable:true,clientX:x,clientY:y,movementX:mx,movementY:my});window.dispatchEvent(ev);document.dispatchEvent(ev);$("unity-canvas").dispatchEvent(ev);}
+window.addEventListener("orientationchange",()=>{gyroBase=null;});
 $("gyroToggle").addEventListener("click",()=>setGyro(!gyroEnabled));
 window.addEventListener("resize",applyCanvasDisplay);
 let fpsLoopRunning=false;function startFPS(){if(fpsLoopRunning||!fpsEnabled)return;fpsLoopRunning=true;let last=performance.now(),frames=0;function tick(now){if(!fpsEnabled){fpsLoopRunning=false;return;}frames++;if(now-last>=1000){$("fps").textContent="FPS: "+Math.round(frames*1000/(now-last));frames=0;last=now;}requestAnimationFrame(tick);}requestAnimationFrame(tick);}
-function applyCanvasDisplay(){const c=$("unity-canvas");if(!c)return;const [w,h]=resolution.split("x").map(Number),aspect=w/h;if(stretchScreen){c.style.width="100vw";c.style.height="100vh";}else{const vw=innerWidth,vh=innerHeight,scale=Math.min(vw/w,vh/h);c.style.width=Math.floor(w*scale)+"px";c.style.height=Math.floor(h*scale)+"px";}c.style.objectFit="fill";}
+function resizeCanvasBuffer(){const c=$("unity-canvas");if(!c)return;const [w,h]=resolution.split("x").map(Number);const scale=Math.max(0.1,Math.min(1,renderScale/100));const nw=Math.max(1,Math.round(w*scale)),nh=Math.max(1,Math.round(h*scale));if(c.width!==nw)c.width=nw;if(c.height!==nh)c.height=nh;}
+function applyCanvasDisplay(){const c=$("unity-canvas");if(!c)return;const [w,h]=resolution.split("x").map(Number);if(stretchScreen){c.style.width="100vw";c.style.height="100vh";}else{const scale=Math.min(innerWidth/w,innerHeight/h);c.style.width=Math.floor(w*scale)+"px";c.style.height=Math.floor(h*scale)+"px";}c.style.objectFit="fill";}
 function setStretch(v){stretchScreen=v;localStorage.setItem("ct-stretch",v?"1":"0");$("stretchToggle").classList.toggle("on",v);$("stretchToggle").setAttribute("aria-checked",String(v));if($("game").style.display==="flex")applyCanvasDisplay();}
 function setFPS(v){fpsEnabled=v;localStorage.setItem("ct-fps",v?"1":"0");$("fpsToggle").classList.toggle("on",v);$("fpsToggle").setAttribute("aria-checked",String(v));if($("game").style.display==="flex"){$("fps").style.display=v?"block":"none";if(v)startFPS();}}
 $("fpsToggle").addEventListener("click",()=>setFPS(!fpsEnabled));setFPS(fpsEnabled);
 $("gameResolution").value=resolution;$("renderScale").value=renderScale;$("scaleValue").textContent=renderScale+"%";
-$("gameResolution").addEventListener("change",e=>{resolution=e.target.value;localStorage.setItem("ct-resolution",resolution);applyCanvasDisplay();});
-$("renderScale").addEventListener("input",e=>{renderScale=Number(e.target.value);$("scaleValue").textContent=renderScale+"%";localStorage.setItem("ct-render-scale",String(renderScale));});
+$("gameResolution").addEventListener("change",e=>{resolution=e.target.value;localStorage.setItem("ct-resolution",resolution);resizeCanvasBuffer();applyCanvasDisplay();});
+$("renderScale").addEventListener("input",e=>{renderScale=Number(e.target.value);$("scaleValue").textContent=renderScale+"%";localStorage.setItem("ct-render-scale",String(renderScale));resizeCanvasBuffer();});
 $("stretchToggle").addEventListener("click",()=>setStretch(!stretchScreen));setStretch(stretchScreen);
 function openEditor(){
  const editor=$("editor"),items=$("editorItems");items.innerHTML="";editor.style.display="block";
