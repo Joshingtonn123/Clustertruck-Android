@@ -52,7 +52,7 @@ def search_bytes(data, label, report):
 
 def parse_unity_web_data(data, report):
     magic = b"UnityWebData1.0\n"
-    if not data.startswith(magic):
+    if data[:len(magic)] != magic:
         add(report, "UnityWebData header: not found at byte 0.")
         add(report, f"First 32 bytes (hex): {data[:32].hex(' ')}")
         return
