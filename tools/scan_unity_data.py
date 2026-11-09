@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Join split Unity WebGL data and search for embedded branding strings. Diagnostic build."""
+"""Join split Unity WebGL data and search for embedded branding strings. Diagnostic build with UnityWebData entry parsing."""
 from pathlib import Path
 import mmap
 import struct
