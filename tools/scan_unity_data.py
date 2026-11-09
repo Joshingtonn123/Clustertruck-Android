@@ -20,7 +20,9 @@ def add(report, message=""):
     report.append(message)
 
 def search_bytes(data, label, report):
-    lower = data.lower()
+    # mmap objects are not case-foldable; make a bytes view for scanning.
+    raw = data if isinstance(data, bytes) else data[:]
+    lower = raw.lower()
     for term in TERMS:
         needle = term.encode("utf-8")
         pos = 0
@@ -29,8 +31,8 @@ def search_bytes(data, label, report):
             pos = lower.find(needle, pos)
             if pos < 0:
                 break
-            left, right = max(0, pos - 70), min(len(data), pos + len(needle) + 100)
-            snippet = data[left:right].decode("utf-8", "replace").replace("\\x00", " ")
+            left, right = max(0, pos - 70), min(len(raw), pos + len(needle) + 100)
+            snippet = raw[left:right].decode("utf-8", "replace").replace("\\x00", " ")
             add(report, f"MATCH [{label}] term={term!r} offset={pos}: {snippet!r}")
             pos += len(needle)
             count += 1
@@ -39,11 +41,11 @@ def search_bytes(data, label, report):
             pos = 0
             count = 0
             while count < 25:
-                pos = data.find(wide, pos)
+                pos = raw.find(wide, pos)
                 if pos < 0:
                     break
-                left, right = max(0, pos - 100), min(len(data), pos + len(wide) + 140)
-                snippet = data[left:right].decode(encoding, "replace").replace("\\x00", "")
+                left, right = max(0, pos - 100), min(len(raw), pos + len(wide) + 140)
+                snippet = raw[left:right].decode(encoding, "replace").replace("\\x00", "")
                 add(report, f"MATCH [{label}/{encoding}] term={term!r} offset={pos}: {snippet!r}")
                 pos += len(wide)
                 count += 1
