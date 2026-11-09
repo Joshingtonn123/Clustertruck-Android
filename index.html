@@ -42,15 +42,10 @@ h1{margin:0 0 6px;font-size:30px;letter-spacing:-1px}
 
 #leftStick{left:8%;top:76%}#rightStick{left:68%;top:76%}
 #btnRB{left:92%;top:28%}#btnRT{left:92%;top:10%}#btnLT{left:8%;top:10%}#btnLB{left:8%;top:28%}#btnA{left:92%;top:58%}#btnB{left:84%;top:69%}#btnX{left:84%;top:47%}#btnY{left:76%;top:58%}
-#exit,#btnBack,#btnStart{position:absolute;top:10px;z-index:25;pointer-events:auto;background:#111b;padding:7px 11px;font-size:12px}#controlsVisibility{position:absolute;right:12px;bottom:12px;z-index:26;pointer-events:auto;background:#111d;border:1px solid #ffffff88;border-radius:10px;padding:9px 13px;font-size:12px;font-weight:800}#exit{right:10px}#btnStart{right:74px}#btnBack{right:138px}
+#exit,#btnBack,#btnStart{position:absolute;z-index:25;pointer-events:auto;background:#111b;padding:7px 11px;font-size:12px}#btnBack,#btnStart{top:auto;right:auto;padding:0;border-radius:12px;transform:translate(-50%,-50%)}#controlsVisibility{position:absolute;right:12px;bottom:12px;z-index:26;pointer-events:auto;background:#111d;border:1px solid #ffffff88;border-radius:10px;padding:9px 13px;font-size:12px;font-weight:800}#exit{top:10px;right:10px}
 @media(max-width:520px){.stick{width:112px;height:112px}.pad{width:54px;height:54px;font-size:13px}}
 
-#splashCredits{display:none;position:absolute;inset:0;z-index:18;pointer-events:none;opacity:1;transition:opacity .5s;color:#fff;text-align:center;text-shadow:0 2px 4px #000;font-size:clamp(11px,1.7vw,17px);line-height:1.4}
-#splashCredits .splashPorted,#splashCredits .splashCreditDetails{position:absolute;left:50%;transform:translateX(-50%);width:min(78vw,650px);padding:8px 14px;background:#18344be8;border:1px solid #ffffff55;border-radius:8px;box-shadow:0 4px 16px #0006}
-#splashCredits .splashPorted{top:19%}
-#splashCredits .splashCreditDetails{top:38%}
-#splashCredits b{font-size:1.08em;letter-spacing:.04em}
-#myChannel{position:absolute;right:12px;top:58px;z-index:27;padding:7px 11px;border-radius:9px;background:#111d;color:#fff;border:1px solid #ffffff88;font-weight:800;font-size:11px;pointer-events:auto}
+
 </style>
 </head>
 <body>
@@ -90,8 +85,6 @@ h1{margin:0 0 6px;font-size:30px;letter-spacing:-1px}
   </div>
  </div>
  <div id="gameError"></div>
- <button id="myChannel">MY CHANNEL</button>
- <div id="splashCredits"><div class="splashPorted"><b>PORTED BY</b><br>SyrexGenesisX (Me) · NotRexed · Wasm.rip</div><div class="splashCreditDetails"><b>CREDITS</b><br>NotRexed for the port<br>Wasm.rip to play in<br>SyrexGenesisX for porting it into Android</div></div>
 
 </div>
 <div id="editor" style="display:none;position:fixed;inset:0;background:#000;z-index:100;overflow:hidden">
@@ -120,8 +113,8 @@ let db=null,unityInstance=null,installed=false,rtOn=false,fpsEnabled=localStorag
 let resolution=localStorage.getItem("ct-resolution")||"1600x720";
 let renderScale=Number(localStorage.getItem("ct-render-scale")||100);
 let stretchScreen=localStorage.getItem("ct-stretch")==="1";
-const controlDefaults={"leftStick":{x:17,y:80,size:122,opacity:72},"rightStick":{x:78,y:82,size:122,opacity:72},"btnLT":{x:7,y:10,size:54,opacity:78},"btnLB":{x:7,y:21,size:54,opacity:78},"btnRT":{x:93,y:10,size:54,opacity:78},"btnRB":{x:93,y:21,size:54,opacity:78},"btnY":{x:90,y:48,size:50,opacity:82},"btnX":{x:84,y:59,size:50,opacity:82},"btnB":{x:96,y:59,size:50,opacity:82},"btnA":{x:90,y:70,size:50,opacity:82},"dpadUp":{x:14,y:41,size:40,opacity:78},"dpadDown":{x:14,y:53,size:40,opacity:78},"dpadLeft":{x:8,y:47,size:40,opacity:78},"dpadRight":{x:20,y:47,size:40,opacity:78},"btnBack":{x:45,y:92,size:50,opacity:78},"btnStart":{x:55,y:92,size:50,opacity:78}};
-let controlLayout=JSON.parse(localStorage.getItem("ct-controls-v4")||"null")||JSON.parse(JSON.stringify(controlDefaults));
+const controlDefaults={"leftStick":{x:19,y:80,size:120,opacity:72},"rightStick":{x:80,y:80,size:120,opacity:72},"btnLT":{x:11,y:10,size:52,opacity:78},"btnLB":{x:11,y:22,size:52,opacity:78},"btnRT":{x:89,y:10,size:52,opacity:78},"btnRB":{x:89,y:22,size:52,opacity:78},"btnY":{x:90,y:47,size:50,opacity:82},"btnX":{x:85,y:55,size:50,opacity:82},"btnB":{x:95,y:55,size:50,opacity:82},"btnA":{x:90,y:63,size:50,opacity:82},"dpadUp":{x:13,y:43,size:48,opacity:78},"dpadDown":{x:13,y:51,size:48,opacity:78},"dpadLeft":{x:10,y:47,size:48,opacity:78},"dpadRight":{x:16,y:47,size:48,opacity:78},"btnBack":{x:46,y:92,size:58,opacity:82},"btnStart":{x:55,y:92,size:58,opacity:82}};
+let controlLayout=JSON.parse(localStorage.getItem("ct-controls-v5")||"null")||JSON.parse(JSON.stringify(controlDefaults));
 let gyroEnabled=false,gyroBase=null,gyroLast=0,gyroSensitivity=Number(localStorage.getItem("ct-gyro-sensitivity")||2),controlsVisible=true;
 function applyControlLayout(){
  for(const [id,p] of Object.entries(controlLayout)){
@@ -163,7 +156,7 @@ async function install(){
 }
 async function readAsset(id){const meta=await get("meta",id);if(!meta)throw new Error("Missing installed file: "+id);const buffers=[];for(let i=0;i<meta.parts;i++){const row=await get("files",id+":"+i);if(!row)throw new Error("Missing part "+(i+1)+" of "+id);buffers.push(row.buffer);}return new Blob(buffers,{type:meta.mime});}
 async function play(){
- $("launcher").style.display="none";$("game").style.display="flex";$("controls").style.display="block";setControlsVisible(controlsVisible);$("fps").style.display=fpsEnabled?"block":"none";showSplashCredits();$("unity-canvas").focus();
+ $("launcher").style.display="none";$("game").style.display="flex";$("controls").style.display="block";setControlsVisible(controlsVisible);$("fps").style.display=fpsEnabled?"block":"none";$("unity-canvas").focus();
  try{
   db=db||await openDB();
   const [data,wasm,loader,framework]=await Promise.all([readAsset("data"),readAsset("wasm"),readAsset("loader"),readAsset("framework")]);
@@ -217,10 +210,6 @@ $("gyroSensitivity").value=gyroSensitivity;$("gyroSensitivityValue").textContent
 $("gyroSensitivity").addEventListener("input",e=>{gyroSensitivity=Number(e.target.value);$("gyroSensitivityValue").textContent=gyroSensitivity.toFixed(1)+"x";localStorage.setItem("ct-gyro-sensitivity",String(gyroSensitivity));});
 function setControlsVisible(v){controlsVisible=v;$("controls").style.display=v?"block":"none";$("btnBack").style.display=v?"block":"none";$("btnStart").style.display=v?"block":"none";$("controlsVisibility").textContent=v?"HIDE":"SHOW";$("controlsVisibility").setAttribute("aria-label",v?"Hide touch controls":"Show touch controls");}
 $("controlsVisibility").addEventListener("click",()=>setControlsVisible(!controlsVisible));
-const CHANNEL_URL="https://youtube.com/@syrexgenesisx?si=koYPwYY1ZsL45gYN";
-$("myChannel").addEventListener("click",()=>{window.open(CHANNEL_URL,"_blank")|| (window.location.href=CHANNEL_URL);});
-let splashCreditTimer=null;
-function showSplashCredits(){const el=$("splashCredits");if(!el)return;el.style.display="block";el.style.opacity="1";if(splashCreditTimer)clearTimeout(splashCreditTimer);splashCreditTimer=setTimeout(()=>{el.style.opacity="0";setTimeout(()=>{el.style.display="none";},500);},6500);}
 
 window.addEventListener("resize",applyCanvasDisplay);
 let fpsLoopRunning=false;function startFPS(){if(fpsLoopRunning||!fpsEnabled)return;fpsLoopRunning=true;let last=performance.now(),frames=0;function tick(now){if(!fpsEnabled){fpsLoopRunning=false;return;}frames++;if(now-last>=1000){$("fps").textContent="FPS: "+Math.round(frames*1000/(now-last));frames=0;last=now;}requestAnimationFrame(tick);}requestAnimationFrame(tick);}
@@ -244,7 +233,7 @@ function openEditor(){
 let selectedControl=null,dragPointer=null;
 $("customizeBtn").addEventListener("click",openEditor);
 $("editorBack").addEventListener("click",()=>{$("editor").style.display="none";});
-$("editorSave").addEventListener("click",()=>{localStorage.setItem("ct-controls-v4",JSON.stringify(controlLayout));applyControlLayout();$("editor").style.display="none";});
+$("editorSave").addEventListener("click",()=>{localStorage.setItem("ct-controls-v5",JSON.stringify(controlLayout));applyControlLayout();$("editor").style.display="none";});
 $("editSize").addEventListener("input",e=>{if(!selectedControl)return;controlLayout[selectedControl].size=Number(e.target.value);const el=document.querySelector('.editControl[data-id="'+selectedControl+'"]');if(el){el.style.width=e.target.value+"px";el.style.height=e.target.value+"px";}});
 $("editOpacity").addEventListener("input",e=>{if(!selectedControl)return;controlLayout[selectedControl].opacity=Number(e.target.value);const el=document.querySelector('.editControl[data-id="'+selectedControl+'"]');if(el)el.style.opacity=String(Number(e.target.value)/100);});
 $("editReset").addEventListener("click",()=>{controlLayout=JSON.parse(JSON.stringify(controlDefaults));openEditor();});
