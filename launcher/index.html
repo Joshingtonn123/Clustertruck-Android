@@ -38,12 +38,20 @@ h1{margin:0 0 6px;font-size:30px;letter-spacing:-1px}
 .pad{position:absolute;left:0;top:0;width:64px;height:64px;padding:0;border-radius:50%;background:#151515bb;border:1px solid #ffffff99;font-weight:800;font-size:16px;pointer-events:auto;touch-action:none;box-shadow:0 2px 8px #0008;transform:translate(-50%,-50%)}
 .pad.active{background:#b52b2b;color:white}.gyro-hidden{display:none!important}
 #btnA,#btnRT,#btnLT,#btnRB,#btnLB,#dpadUp,#dpadDown,#dpadLeft,#dpadRight{right:auto;bottom:auto}
-.dpad{display:none;font-size:22px}
+.dpad{display:flex;font-size:22px}
 #btnBack{top:auto!important;left:42%!important;right:auto!important;bottom:10px!important}#btnStart{top:auto!important;left:52%!important;right:auto!important;bottom:10px!important}
 #leftStick{left:8%;top:76%}#rightStick{left:68%;top:76%}
 #btnRB{left:92%;top:28%}#btnRT{left:92%;top:10%}#btnLT{left:8%;top:10%}#btnLB{left:8%;top:28%}#btnA{left:92%;top:58%}#btnB{left:84%;top:69%}#btnX{left:84%;top:47%}#btnY{left:76%;top:58%}
 #exit,#btnBack,#btnStart{position:absolute;top:10px;z-index:25;pointer-events:auto;background:#111b;padding:7px 11px;font-size:12px}#controlsVisibility{position:absolute;right:12px;bottom:12px;z-index:26;pointer-events:auto;background:#111d;border:1px solid #ffffff88;border-radius:10px;padding:9px 13px;font-size:12px;font-weight:800}#exit{right:10px}#btnStart{right:74px}#btnBack{right:138px}
 @media(max-width:520px){.stick{width:112px;height:112px}.pad{width:54px;height:54px;font-size:13px}}
+
+#startupCredits{position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:#0007;pointer-events:none;opacity:1;transition:opacity .8s}
+#startupCredits .creditCard{background:#101820ed;border:1px solid #ffffff66;border-radius:18px;padding:22px 28px;text-align:center;box-shadow:0 12px 40px #0009;max-width:min(88vw,440px);line-height:1.55}
+#startupCredits .creditTitle{font-size:20px;font-weight:900;letter-spacing:1px;margin-bottom:10px}
+#startupCredits .creditLines{font-size:14px;color:#e8eef5}
+#menuCredits{position:absolute;left:50%;bottom:7%;transform:translateX(-50%);z-index:14;background:#142c40ed;border:1px solid #ffffff88;border-radius:12px;padding:8px 14px;text-align:center;min-width:230px;max-width:82vw;box-shadow:0 4px 18px #0008;pointer-events:auto}
+#menuCredits .creditLine{font-size:11px;line-height:1.45;color:#e7edf4}
+#myChannel{margin-top:6px;padding:7px 15px;border-radius:8px;background:#f4f4f4;color:#111;border:0;font-weight:800;font-size:12px;pointer-events:auto}
 </style>
 </head>
 <body>
@@ -77,12 +85,24 @@ h1{margin:0 0 6px;font-size:30px;letter-spacing:-1px}
    <button class="pad" id="btnLT">LT</button>
    <button class="pad" id="btnRT">RT</button>
    <button class="pad dpad" id="dpadUp">▲</button><button class="pad dpad" id="dpadDown">▼</button><button class="pad dpad" id="dpadLeft">◀</button><button class="pad dpad" id="dpadRight">▶</button>
-   <button class="pad" id="btnA">A</button><button class="pad" id="btnB">B</button><button class="pad" id="btnX">X</button><button class="pad" id="btnY">Y</button>
+   <button class="pad" id="btnY">Y</button><button class="pad" id="btnX">X</button><button class="pad" id="btnB">B</button><button class="pad" id="btnA">A</button>
    <button class="pad" id="btnRB">RB</button>
    <button class="pad" id="btnLB">LB</button>
   </div>
  </div>
  <div id="gameError"></div>
+ <div id="menuCredits">
+  <div class="creditLine"><b>Ported:</b> SyrexGenesisX · NotRexed · wasm.rip</div>
+  <div class="creditLine"><b>Credits:</b> NotRexed for the original port · wasm.rip runtime · SyrexGenesisX for Android porting</div>
+  <button id="myChannel">MY CHANNEL</button>
+ </div>
+ <div id="startupCredits">
+  <div class="creditCard">
+   <div class="creditTitle">CLUSTERTRUCK ANDROID</div>
+   <div class="creditLines"><b>Ported:</b><br>SyrexGenesisX (Me)<br>NotRexed<br>Wasm.rip<br><br><b>Credits:</b><br>NotRexed for the port<br>Wasm.rip to play in<br>SyrexGenesisX for porting it into Android</div>
+  </div>
+ </div>
+
 </div>
 <div id="editor" style="display:none;position:fixed;inset:0;background:#000;z-index:100;overflow:hidden">
  <div style="position:absolute;left:16px;top:14px;right:16px;display:flex;align-items:center;justify-content:space-between;z-index:3">
@@ -110,8 +130,8 @@ let db=null,unityInstance=null,installed=false,rtOn=false,fpsEnabled=localStorag
 let resolution=localStorage.getItem("ct-resolution")||"1600x720";
 let renderScale=Number(localStorage.getItem("ct-render-scale")||100);
 let stretchScreen=localStorage.getItem("ct-stretch")==="1";
-const controlDefaults={"leftStick":{x:14,y:76,size:140,opacity:75},"rightStick":{x:78,y:76,size:140,opacity:75},"btnLT":{x:8,y:10,size:64,opacity:75},"btnLB":{x:8,y:28,size:64,opacity:75},"btnRT":{x:92,y:10,size:64,opacity:75},"btnRB":{x:92,y:28,size:64,opacity:75},"btnA":{x:92,y:58,size:64,opacity:75},"btnB":{x:84,y:69,size:64,opacity:75},"btnX":{x:84,y:47,size:64,opacity:75},"btnY":{x:76,y:58,size:64,opacity:75},"btnBack":{x:42,y:91,size:58,opacity:75},"btnStart":{x:52,y:91,size:58,opacity:75}};
-let controlLayout=JSON.parse(localStorage.getItem("ct-controls-v2")||"null")||JSON.parse(JSON.stringify(controlDefaults));
+const controlDefaults={"leftStick":{x:16,y:78,size:140,opacity:75},"rightStick":{x:80,y:78,size:140,opacity:75},"btnLT":{x:7,y:10,size:64,opacity:75},"btnLB":{x:7,y:22,size:64,opacity:75},"btnRT":{x:93,y:10,size:64,opacity:75},"btnRB":{x:93,y:22,size:64,opacity:75},"btnY":{x:88,y:48,size:58,opacity:75},"btnX":{x:82,y:58,size:58,opacity:75},"btnB":{x:94,y:58,size:58,opacity:75},"btnA":{x:88,y:68,size:58,opacity:75},"dpadUp":{x:14,y:42,size:48,opacity:75},"dpadDown":{x:14,y:54,size:48,opacity:75},"dpadLeft":{x:8,y:48,size:48,opacity:75},"dpadRight":{x:20,y:48,size:48,opacity:75},"btnBack":{x:43,y:91,size:58,opacity:75},"btnStart":{x:53,y:91,size:58,opacity:75}};
+let controlLayout=JSON.parse(localStorage.getItem("ct-controls-v3")||"null")||JSON.parse(JSON.stringify(controlDefaults));
 if(controlLayout.btnLB&&controlLayout.btnLB.y===21)controlLayout.btnLB.y=28;
 if(controlLayout.btnRB&&controlLayout.btnRB.y===21)controlLayout.btnRB.y=28;
 let gyroEnabled=false,gyroBase=null,gyroLast=0,gyroSensitivity=Number(localStorage.getItem("ct-gyro-sensitivity")||2),controlsVisible=true;
@@ -178,7 +198,7 @@ function mouse(button,down){const type=down?"mousedown":"mouseup",x=innerWidth/2
 function bindPad(id,down,up){const el=$(id);el.addEventListener("pointerdown",e=>{e.preventDefault();focusGame();el.setPointerCapture(e.pointerId);el.classList.add("active");down();});const release=e=>{el.classList.remove("active");up();};el.addEventListener("pointerup",release);el.addEventListener("pointercancel",release);el.addEventListener("lostpointercapture",release);}
 bindPad("btnA",()=>{key("Space",true);key("Enter",true);},()=>{key("Space",false);key("Enter",false);});
 
-bindPad("btnRB",()=>mouse(2,true),()=>mouse(2,false));
+bindPad("btnRB",()=>mouse(2,true),()=>mouse(2,false));\nbindPad("btnB",()=>key("Escape",true),()=>key("Escape",false));\nbindPad("btnX",()=>mouse(0,true),()=>mouse(0,false));\nbindPad("btnY",()=>key("KeyQ",true),()=>key("KeyQ",false));
 bindPad("btnB",()=>key("Escape",true),()=>key("Escape",false));
 bindPad("btnX",()=>mouse(0,true),()=>mouse(0,false));
 bindPad("btnY",()=>key("KeyQ",true),()=>key("KeyQ",false));
@@ -209,6 +229,9 @@ $("gyroSensitivity").value=gyroSensitivity;$("gyroSensitivityValue").textContent
 $("gyroSensitivity").addEventListener("input",e=>{gyroSensitivity=Number(e.target.value);$("gyroSensitivityValue").textContent=gyroSensitivity.toFixed(1)+"x";localStorage.setItem("ct-gyro-sensitivity",String(gyroSensitivity));});
 function setControlsVisible(v){controlsVisible=v;$("controls").style.display=v?"block":"none";$("btnBack").style.display=v?"block":"none";$("btnStart").style.display=v?"block":"none";$("controlsVisibility").textContent=v?"HIDE":"SHOW";$("controlsVisibility").setAttribute("aria-label",v?"Hide touch controls":"Show touch controls");}
 $("controlsVisibility").addEventListener("click",()=>setControlsVisible(!controlsVisible));
+const CHANNEL_URL="https://youtube.com/@syrexgenesisx?si=koYPwYY1ZsL45gYN";
+$("myChannel").addEventListener("click",()=>{window.open(CHANNEL_URL,"_blank")|| (window.location.href=CHANNEL_URL);});
+
 window.addEventListener("resize",applyCanvasDisplay);
 let fpsLoopRunning=false;function startFPS(){if(fpsLoopRunning||!fpsEnabled)return;fpsLoopRunning=true;let last=performance.now(),frames=0;function tick(now){if(!fpsEnabled){fpsLoopRunning=false;return;}frames++;if(now-last>=1000){$("fps").textContent="FPS: "+Math.round(frames*1000/(now-last));frames=0;last=now;}requestAnimationFrame(tick);}requestAnimationFrame(tick);}
 function resizeCanvasBuffer(){const c=$("unity-canvas");if(!c)return;const [w,h]=resolution.split("x").map(Number);const scale=Math.max(0.1,Math.min(1,renderScale/100));const nw=Math.max(1,Math.round(w*scale)),nh=Math.max(1,Math.round(h*scale));if(c.width!==nw)c.width=nw;if(c.height!==nh)c.height=nh;}
@@ -231,7 +254,7 @@ function openEditor(){
 let selectedControl=null,dragPointer=null;
 $("customizeBtn").addEventListener("click",openEditor);
 $("editorBack").addEventListener("click",()=>{$("editor").style.display="none";});
-$("editorSave").addEventListener("click",()=>{localStorage.setItem("ct-controls-v2",JSON.stringify(controlLayout));applyControlLayout();$("editor").style.display="none";});
+$("editorSave").addEventListener("click",()=>{localStorage.setItem("ct-controls-v3",JSON.stringify(controlLayout));applyControlLayout();$("editor").style.display="none";});
 $("editSize").addEventListener("input",e=>{if(!selectedControl)return;controlLayout[selectedControl].size=Number(e.target.value);const el=document.querySelector('.editControl[data-id="'+selectedControl+'"]');if(el){el.style.width=e.target.value+"px";el.style.height=e.target.value+"px";}});
 $("editOpacity").addEventListener("input",e=>{if(!selectedControl)return;controlLayout[selectedControl].opacity=Number(e.target.value);const el=document.querySelector('.editControl[data-id="'+selectedControl+'"]');if(el)el.style.opacity=String(Number(e.target.value)/100);});
 $("editReset").addEventListener("click",()=>{controlLayout=JSON.parse(JSON.stringify(controlDefaults));openEditor();});
