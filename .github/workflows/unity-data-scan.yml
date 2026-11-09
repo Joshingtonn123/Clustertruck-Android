@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   scan-unity-data:
@@ -24,6 +24,14 @@ jobs:
 
       - name: Join and inspect Unity data
         run: python3 tools/scan_unity_data.py
+
+      - name: Save report on dev-test
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add unity-data-scan-report.txt
+          git commit -m "Add Unity data scan report" || echo "Report unchanged"
+          git push origin HEAD:dev-test
 
       - name: Upload scan report
         uses: actions/upload-artifact@v4
