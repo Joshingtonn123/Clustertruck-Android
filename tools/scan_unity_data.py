@@ -126,4 +126,11 @@ def main():
     return 0
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except Exception:
+        import traceback
+        details = traceback.format_exc()
+        OUT.write_text("SCAN ERROR\\n" + details, encoding="utf-8")
+        print(details)
+        sys.exit(0)
