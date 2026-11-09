@@ -1,13 +1,15 @@
-## Clustertruck For Android
+# Clustertruck For Android
 
-Clustertruck Android is the Android Version of Clustertruck
+An Android WebView launcher for the Clustertruck WebGL port.
 
 ## Credits
 
-NotRexed for making it into an webport
+**Ported:**
+- SyrexGenesisX (Me)
+- NotRexed
+- Wasm.rip
 
-wasm.rip for making it playable thru an website
-
-SyrexGenesisX/Josh (me) for porting it into Android
-
-that's it
+**Credits:**
+- NotRexed for the port
+- Wasm.rip to play in
+- SyrexGenesisX for porting it into Android
