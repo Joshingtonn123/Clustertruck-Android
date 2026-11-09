@@ -51,35 +51,35 @@ def search_bytes(data, label, report):
                 count += 1
 
 def parse_unity_web_data(data, report):
-    magic = b"UnityWebData1.0\0"
+    magic = b"UnityWebData1.0\\0"
     if data[:len(magic)] != magic:
         add(report, "UnityWebData header: not found at byte 0.")
         add(report, f"First 32 bytes (hex): {data[:32].hex(' ')}")
         return
     add(report, "UnityWebData header: FOUND.")
-    if len(data) < len(magic) + 4:
-        add(report, "Header truncated before header-size field.")
-        return
     header_size = struct.unpack_from("<I", data, len(magic))[0]
     add(report, f"Declared header size: {header_size}")
     cursor = len(magic) + 4
     count = 0
     while cursor < min(header_size, len(data)):
-        if cursor + 8 > len(data):
+        # UnityWebData entries are: offset, size, path byte-length, path bytes.
+        if cursor + 12 > header_size:
             add(report, "Entry table ended unexpectedly.")
             break
-        offset, size = struct.unpack_from("<II", data, cursor)
-        cursor += 8
-        end = data.find(b"\0", cursor, min(header_size, len(data)))
-        if end < 0:
-            add(report, "Could not find end of entry path.")
+        offset, size, path_len = struct.unpack_from("<III", data, cursor)
+        cursor += 12
+        if path_len <= 0 or cursor + path_len > header_size:
+            add(report, f"Invalid path length {path_len} at header position {cursor - 4}.")
             break
-        path = data[cursor:end].decode("utf-8", "replace")
-        cursor = end + 1
+        path = data[cursor:cursor + path_len].decode("utf-8", "replace")
+        cursor += path_len
         count += 1
         add(report, f"ENTRY {count}: offset={offset} size={size} path={path}")
         if offset + size <= len(data) and size:
-            search_bytes(data[offset:offset + size], f"entry:{path}", report)
+            entry = data[offset:offset + size]
+            search_bytes(entry, f"entry:{path}", report)
+            # List recognizable formats at the start of each entry.
+            add(report, f"ENTRY FORMAT {path}: {entry[:16].hex(' ')}")
         else:
             add(report, f"WARNING: entry range outside combined data: {path}")
     add(report, f"Parsed embedded entries: {count}")
