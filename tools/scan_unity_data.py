@@ -51,7 +51,7 @@ def search_bytes(data, label, report):
                 count += 1
 
 def parse_unity_web_data(data, report):
-    magic = b"UnityWebData1.0\\n"
+    magic = b"UnityWebData1.0\n"
     if not data.startswith(magic):
         add(report, "UnityWebData header: not found at byte 0.")
         add(report, f"First 32 bytes (hex): {data[:32].hex(' ')}")
@@ -70,7 +70,7 @@ def parse_unity_web_data(data, report):
             break
         offset, size = struct.unpack_from("<II", data, cursor)
         cursor += 8
-        end = data.find(b"\\0", cursor, min(header_size, len(data)))
+        end = data.find(b"\0", cursor, min(header_size, len(data)))
         if end < 0:
             add(report, "Could not find end of entry path.")
             break
