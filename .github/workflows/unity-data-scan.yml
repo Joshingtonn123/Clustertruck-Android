@@ -8,6 +8,7 @@ on:
       - "Build/ClusterTruckWEB.loader.js"
       - "Build/ClusterTruckWEB.framework.js"
       - "tools/scan_unity_data.py"
+      - "tools/inspect_unity_bundle.py"
       - ".github/workflows/unity-data-scan.yml"
   workflow_dispatch:
 
@@ -17,18 +18,27 @@ permissions:
 jobs:
   scan-unity-data:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Check out dev-test
         uses: actions/checkout@v4
 
+      - name: Install Unity asset inspection tools
+        run: python3 -m pip install --disable-pip-version-check UnityPy
+
       - name: Join and inspect Unity data
         run: python3 tools/scan_unity_data.py
 
-      - name: Upload scan report
+      - name: Inspect UnityFS bundle and export candidate images
+        run: python3 tools/inspect_unity_bundle.py
+
+      - name: Upload scan reports and candidate images
         uses: actions/upload-artifact@v4
         with:
-          name: clustertruck-unity-data-scan-report
-          path: unity-data-scan-report.txt
+          name: clustertruck-unity-asset-inspection
+          path: |
+            unity-data-scan-report.txt
+            unity-assets-report.txt
+            unity-assets/
           if-no-files-found: error
           retention-days: 14
