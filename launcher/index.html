@@ -155,7 +155,7 @@ async function install(){
 }
 async function readAsset(id){const meta=await get("meta",id);if(!meta)throw new Error("Missing installed file: "+id);const buffers=[];for(let i=0;i<meta.parts;i++){const row=await get("files",id+":"+i);if(!row)throw new Error("Missing part "+(i+1)+" of "+id);buffers.push(row.buffer);}return new Blob(buffers,{type:meta.mime});}
 async function play(){
- $("launcher").style.display="none";$("game").style.display="flex";$("controls").style.display="block";$("fps").style.display=fpsEnabled?"block":"none";$("unity-canvas").focus();
+ $("launcher").style.display="none";$("game").style.display="flex";$("controls").style.display="block";setControlsVisible(controlsVisible);$("fps").style.display=fpsEnabled?"block":"none";$("unity-canvas").focus();
  try{
   db=db||await openDB();
   const [data,wasm,loader,framework]=await Promise.all([readAsset("data"),readAsset("wasm"),readAsset("loader"),readAsset("framework")]);
