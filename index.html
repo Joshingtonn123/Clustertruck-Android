@@ -45,7 +45,10 @@ h1{margin:0 0 6px;font-size:30px;letter-spacing:-1px}
 #exit,#btnBack,#btnStart{position:absolute;top:10px;z-index:25;pointer-events:auto;background:#111b;padding:7px 11px;font-size:12px}#controlsVisibility{position:absolute;right:12px;bottom:12px;z-index:26;pointer-events:auto;background:#111d;border:1px solid #ffffff88;border-radius:10px;padding:9px 13px;font-size:12px;font-weight:800}#exit{right:10px}#btnStart{right:74px}#btnBack{right:138px}
 @media(max-width:520px){.stick{width:112px;height:112px}.pad{width:54px;height:54px;font-size:13px}}
 
-#splashCredits{display:none;position:absolute;left:50%;top:22%;transform:translateX(-50%);z-index:18;width:min(78vw,650px);padding:10px 16px;text-align:center;color:#fff;background:#18344bdc;border:1px solid #ffffff55;border-radius:10px;box-shadow:0 4px 18px #0006;pointer-events:none;line-height:1.45;opacity:1;transition:opacity .5s;text-shadow:0 2px 3px #000;font-size:clamp(11px,1.7vw,17px)}
+#splashCredits{display:none;position:absolute;inset:0;z-index:18;pointer-events:none;opacity:1;transition:opacity .5s;color:#fff;text-align:center;text-shadow:0 2px 4px #000;font-size:clamp(11px,1.7vw,17px);line-height:1.4}
+#splashCredits .splashPorted,#splashCredits .splashCreditDetails{position:absolute;left:50%;transform:translateX(-50%);width:min(78vw,650px);padding:8px 14px;background:#18344be8;border:1px solid #ffffff55;border-radius:8px;box-shadow:0 4px 16px #0006}
+#splashCredits .splashPorted{top:19%}
+#splashCredits .splashCreditDetails{top:38%}
 #splashCredits b{font-size:1.08em;letter-spacing:.04em}
 #myChannel{position:absolute;right:12px;top:58px;z-index:27;padding:7px 11px;border-radius:9px;background:#111d;color:#fff;border:1px solid #ffffff88;font-weight:800;font-size:11px;pointer-events:auto}
 </style>
@@ -88,7 +91,7 @@ h1{margin:0 0 6px;font-size:30px;letter-spacing:-1px}
  </div>
  <div id="gameError"></div>
  <button id="myChannel">MY CHANNEL</button>
- <div id="splashCredits"><b>PORTED BY</b><br>SyrexGenesisX (Me) · NotRexed · Wasm.rip<br><b>CREDITS</b><br>NotRexed for the port · Wasm.rip to play in · SyrexGenesisX for porting it into Android</div>
+ <div id="splashCredits"><div class="splashPorted"><b>PORTED BY</b><br>SyrexGenesisX (Me) · NotRexed · Wasm.rip</div><div class="splashCreditDetails"><b>CREDITS</b><br>NotRexed for the port<br>Wasm.rip to play in<br>SyrexGenesisX for porting it into Android</div></div>
 
 </div>
 <div id="editor" style="display:none;position:fixed;inset:0;background:#000;z-index:100;overflow:hidden">
